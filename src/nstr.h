@@ -2,9 +2,10 @@
 #define NSTR_H
 
 #include <stdint.h>
-#include "def.h"
-#include "str.h"
-#include "buff.h"
+
+#undef NSTR_TYPE
+#undef NSTR_SSO_THRESHOLD
+#undef NSTR_SIZE_T_HIGH_BIT_MASK
 
 #ifndef NSTR_DEC
 	#define NSTR_DEC(name) nstr_##name
@@ -13,6 +14,7 @@
 #define NSTR_TYPE(name) NSTR_DEC(name)##_t
 
 #define NSTR_SSO_THRESHOLD 14
+#define NSTR_SIZE_T_HIGH_BIT_MASK (1ULL << (sizeof(size_t) * 8 - 1))
 
 // undefine
 #undef nstr__empty
@@ -91,6 +93,8 @@ const char* 	nstr__tostr 	(nstr__t* nstr);
 #undef nstr__malloc
 #undef nstr__realloc
 #undef nstr__free
+#undef nstr__strlen
+#undef nstr__memcpy
 
 #if defined(NSTR_MALLOC) || defined(NSTR_REALLOC) || defined(NSTR_FREE)
 	#if defined(NSTR_MALLOC) && defined(NSTR_REALLOC) && defined(NSTR_FREE)
@@ -101,13 +105,13 @@ const char* 	nstr__tostr 	(nstr__t* nstr);
 		#error If any one of NSTR_MALLOC, NSTR_REALLOC, NSTR_FREE is defined, then all of them must be defined
 	#endif
 
-#elif defined(GPUL_MALLOC) || defined(GPUL_REALLOC) || defined(GPUL_FREE)
-	#if defined(GPUL_MALLOC) && defined(GPUL_REALLOC) && defined(GPUL_FREE)
-		#define nstr__malloc(sz, user) GPUL_MALLOC(sz, user)
-		#define nstr__realloc(ptr, sz, user) GPUL_REALLOC(ptr, sz, user)
-		#define nstr__free(ptr, user) GPUL_FREE(ptr, user)
+#elif defined(CXSL_MALLOC) || defined(CXSL_REALLOC) || defined(CXSL_FREE)
+	#if defined(CXSL_MALLOC) && defined(CXSL_REALLOC) && defined(CXSL_FREE)
+		#define nstr__malloc(sz, user) CXSL_MALLOC(sz, user)
+		#define nstr__realloc(ptr, sz, user) CXSL_REALLOC(ptr, sz, user)
+		#define nstr__free(ptr, user) CXSL_FREE(ptr, user)
 	#else
-		#error If any one of GPUL_MALLOC, GPUL_REALLOC, GPUL_FREE is defined, then all of them must be defined
+		#error If any one of CXSL_MALLOC, CXSL_REALLOC, CXSL_FREE is defined, then all of them must be defined
 	#endif
 #else
 	#include <malloc.h>
@@ -115,6 +119,24 @@ const char* 	nstr__tostr 	(nstr__t* nstr);
 	#define nstr__malloc(sz, user) malloc(sz)
 	#define nstr__realloc(ptr, sz, user) realloc(ptr, sz)
 	#define nstr__free(ptr, user) free(ptr)
+#endif
+
+#if defined(NSTR_STRLEN)
+	#define nstr__strlen(str) NSTR_STRLEN(str)
+#elif defined(CXSL_STRLEN)
+	#define nstr__strlen(str) CXSL_STRLEN(str)
+#else
+	#include <string.h>
+	#define nstr__strlen(str) strlen(str)
+#endif
+
+#if defined(NSTR_MEMCPY)
+	#define nstr__memcpy(dest, src, sz) NSTR_MEMCPY(dest, src, sz)
+#elif defined(CXSL_MEMCPY)
+	#define nstr__memcpy(dest, src, sz) CXSL_MEMCPY(dest, src, sz)
+#else
+	#include <string.h>
+	#define nstr__memcpy(dest, src, sz) memcpy(dest, src, sz)
 #endif
 
 // ----------------------- init and free -------------------------- // 
@@ -127,18 +149,18 @@ nstr__t 		nstr__empty 	()
 nstr__t 		nstr__new 		(	const char* 	str 	, 
 									void* 			user		) 
 {
-	size_t sz = gpul_strlen(str);
+	size_t sz = nstr__strlen(str);
 	nstr__t nstr;
 
 	if (sz > NSTR_SSO_THRESHOLD) {
-		nstr.lg.sz = sz | GPUL_SIZE_T_HIGH_BIT_MASK;
+		nstr.lg.sz = sz | NSTR_SIZE_T_HIGH_BIT_MASK;
 		nstr.lg.data = nstr__malloc(sz + 1, user);
 
-		gpul_memcpy((void*) nstr.lg.data, str, sz + 1);
+		nstr__memcpy((void*) nstr.lg.data, str, sz + 1);
 
 	} else {
 		nstr.sm.sz = (uint8_t) sz;
-		gpul_memcpy(&nstr.sm.data[0], str, sz + 1);
+		nstr__memcpy(&nstr.sm.data[0], str, sz + 1);
 	}
 
 	return nstr;
@@ -151,7 +173,7 @@ nstr__t 		nstr__ofsize 	(	size_t 			sz 		,
 	char* data;
 
 	if (sz > NSTR_SSO_THRESHOLD) {
-		nstr.lg.sz = sz | GPUL_SIZE_T_HIGH_BIT_MASK;
+		nstr.lg.sz = sz | NSTR_SIZE_T_HIGH_BIT_MASK;
 		nstr.lg.data = nstr__malloc(sz + 1, user);
 
 		data = (char*) &nstr.lg.data[0];
@@ -171,7 +193,7 @@ nstr__t 		nstr__move 		(	const char* str 	)
 {
 	nstr__t nstr;
 	
-	nstr.lg.sz = gpul_strlen(str) | GPUL_SIZE_T_HIGH_BIT_MASK;
+	nstr.lg.sz = nstr__strlen(str) | NSTR_SIZE_T_HIGH_BIT_MASK;
 	nstr.lg.data = str;
 
 	return nstr;
@@ -180,7 +202,7 @@ nstr__t 		nstr__move 		(	const char* str 	)
 void 			nstr__delete 	(	nstr__t* 	nstr 	,
 									void*		user 		)
 {
-	if (nstr->bsz.buff[1] & GPUL_SIZE_T_HIGH_BIT_MASK) {
+	if (nstr->bsz.buff[1] & NSTR_SIZE_T_HIGH_BIT_MASK) {
 		nstr__free((void*) nstr->lg.data, user);
 	}
 }
@@ -189,7 +211,7 @@ void 			nstr__delete 	(	nstr__t* 	nstr 	,
 
 const char* 	nstr__begin 	(	nstr__t* nstr 	) 
 {
-	if (nstr->bsz.buff[1] & GPUL_SIZE_T_HIGH_BIT_MASK) {
+	if (nstr->bsz.buff[1] & NSTR_SIZE_T_HIGH_BIT_MASK) {
 		return nstr->lg.data;
 	}
 	else {
@@ -209,8 +231,8 @@ const char* 	nstr__endp1		( 	nstr__t* nstr 	)
 
 size_t 			nstr__size 		( 	nstr__t* nstr 	) 
 {
-	if (nstr->bsz.buff[1] & GPUL_SIZE_T_HIGH_BIT_MASK) {
-		return nstr->lg.sz & ~GPUL_SIZE_T_HIGH_BIT_MASK;
+	if (nstr->bsz.buff[1] & NSTR_SIZE_T_HIGH_BIT_MASK) {
+		return nstr->lg.sz & ~NSTR_SIZE_T_HIGH_BIT_MASK;
 	}
 	else {
 		return (size_t) nstr->sm.sz;

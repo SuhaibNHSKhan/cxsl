@@ -2,8 +2,6 @@
 #define PSTRB_H
 
 #include <stdint.h>
-#include "buff.h"
-#include "str.h"
 
 #ifndef PSTRB_DEC
 	#define PSTRB_DEC(name) pstrb_##name
@@ -73,6 +71,8 @@ char*           pstrb__tostr 		(char* str);
 #undef pstrb__malloc
 #undef pstrb__realloc
 #undef pstrb__free
+#undef pstrb__strlen
+#undef pstrb__memcpy
 
 #if defined(PSTRB_MALLOC) || defined(PSTRB_REALLOC) || defined(PSTRB_FREE)
 	#if defined(PSTRB_MALLOC) && defined(PSTRB_REALLOC) && defined(PSTRB_FREE)
@@ -83,13 +83,13 @@ char*           pstrb__tostr 		(char* str);
 		#error If any one of PSTRB_MALLOC, PSTRB_REALLOC, PSTRB_FREE is defined, then all of them must be defined
 	#endif
 
-#elif defined(GPUL_MALLOC) || defined(GPUL_REALLOC) || defined(GPUL_FREE)
-	#if defined(GPUL_MALLOC) && defined(GPUL_REALLOC) && defined(GPUL_FREE)
-		#define pstrb__malloc(sz, user) GPUL_MALLOC(sz, user)
-		#define pstrb__realloc(ptr, sz, user) GPUL_REALLOC(ptr, sz, user)
-		#define pstrb__free(ptr, user) GPUL_FREE(ptr, user)
+#elif defined(CXSL_MALLOC) || defined(CXSL_REALLOC) || defined(CXSL_FREE)
+	#if defined(CXSL_MALLOC) && defined(CXSL_REALLOC) && defined(CXSL_FREE)
+		#define pstrb__malloc(sz, user) CXSL_MALLOC(sz, user)
+		#define pstrb__realloc(ptr, sz, user) CXSL_REALLOC(ptr, sz, user)
+		#define pstrb__free(ptr, user) CXSL_FREE(ptr, user)
 	#else
-		#error If any one of GPUL_MALLOC, GPUL_REALLOC, GPUL_FREE is defined, then all of them must be defined
+		#error If any one of CXSL_MALLOC, CXSL_REALLOC, CXSL_FREE is defined, then all of them must be defined
 	#endif
 #else
 	#include <malloc.h>
@@ -97,6 +97,24 @@ char*           pstrb__tostr 		(char* str);
 	#define pstrb__malloc(sz, user) malloc(sz)
 	#define pstrb__realloc(ptr, sz, user) realloc(ptr, sz)
 	#define pstrb__free(ptr, user) free(ptr)
+#endif
+
+#if defined(PSTRB_STRLEN)
+	#define pstrb__strlen(str) PSTRB_STRLEN(str)
+#elif defined(CXSL_STRLEN)
+	#define pstrb__strlen(str) CXSL_STRLEN(str)
+#else
+	#include <string.h>
+	#define pstrb__strlen(str) strlen(str)
+#endif
+
+#if defined(PSTRB_MEMCPY)
+	#define pstrb__memcpy(dest, src, sz) PSTRB_MEMCPY(dest, src, sz)
+#elif defined(CXSL_MEMCPY)
+	#define pstrb__memcpy(dest, src, sz) CXSL_MEMCPY(dest, src, sz)
+#else
+	#include <string.h>
+	#define pstrb__memcpy(dest, src, sz) memcpy(dest, src, sz)
 #endif
 
 // ----------------------- types -------------------------- //
@@ -122,7 +140,7 @@ char* pstrb__new 	(	const char*      str    ,
 	pstrb__t* pstrb;
 	char* out;
 
-	sz = gpul_strlen(str);
+	sz = pstrb__strlen(str);
 	cap = sz * 2 + 1;
 
 	pstrb = pstrb__malloc(sizeof(pstrb__header_t) + cap + 1, user);
@@ -132,7 +150,7 @@ char* pstrb__new 	(	const char*      str    ,
 
 	out = &pstrb->buff[0];
 
-	gpul_memcpy((void*) out, (void*) str, sz);
+	pstrb__memcpy((void*) out, (void*) str, sz);
 
 	out[sz] = 0;
 
@@ -205,7 +223,7 @@ char* pstrb__concat_cstr 	(	char*			str 		,
 
 	if (remain == 0 && *cstr != 0) {
 		cap = pstrb__cap(str);
-		len = gpul_strlen(cstr) + cap;
+		len = pstrb__strlen(cstr) + cap;
 
 		while (cap < len) {
 			cap = 2 * cap + 1;
