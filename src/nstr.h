@@ -11,6 +11,7 @@
 #undef NSTR__RESERVED_BIT_MASK
 #undef NSTR__DEC
 #undef NSTR__EXTRA_BYTES
+#undef NSTR__MAX_SIZE
 
 #ifdef CXSL_NSTR_DEC
 	#define NSTR__DEC(name) CXSL_NSTR_DEC(name)
@@ -34,10 +35,10 @@
 	#define NSTR__SSO_THRESHOLD 64
 #endif
 
-#define NSTR__DPTR_BIT_MASK   	   (1ULL << (sizeof(size_t) * 8 - 1))
+#define NSTR__DPTR_BIT_MASK   	   	(1ULL << (sizeof(size_t) * 8 - 1))
 #define NSTR__FREE_BIT_MASK      	(1ULL << (sizeof(size_t) * 8 - 2))
 #define NSTR__RESERVED_BIT_MASK 	(NSTR__DPTR_BIT_MASK | NSTR__FREE_BIT_MASK)
-
+#define NSTR__MAX_SIZE				(~NSTR__RESERVED_BIT_MASK)
 
 // undefine
 #undef nstr__empty
@@ -126,6 +127,7 @@ const char* 	nstr__tostr 	(nstr__t* nstr);
 #undef nstr__free
 #undef nstr__strlen
 #undef nstr__memcpy
+#undef nstr__assert
 
 #if defined(CXSL_NSTR_MALLOC) || defined(CXSL_NSTR_REALLOC) || defined(CXSL_NSTR_FREE)
 	#if defined(CXSL_NSTR_MALLOC) && defined(CXSL_NSTR_REALLOC) && defined(CXSL_NSTR_FREE)
@@ -170,6 +172,13 @@ const char* 	nstr__tostr 	(nstr__t* nstr);
 	#define nstr__memcpy(dest, src, sz) memcpy(dest, src, sz)
 #endif
 
+#if defined(CXSL_ASSERT)
+	#define nstr__assert(check, format, ...) CXSL_ASSERT(check, message, __VA_ARGS__)
+#else
+	#include <assert.h>
+	#define nstr__assert(check, message, ...) assert(check)
+#endif
+
 // ----------------------- init and free -------------------------- // 
 
 nstr__t 		nstr__empty 	() 
@@ -180,12 +189,19 @@ nstr__t 		nstr__empty 	()
 nstr__t 		nstr__new 		(	const char* 	str 	, 
 									void* 			user		) 
 {
+	nstr__assert(str != NULL, "Parameter str cannot be NULL");
+
 	size_t sz = nstr__strlen(str);
+
+	nstr__assert(sz <= NSTR__MAX_SIZE, "Size of str = %zd, Max Size allowed for nstr = %zd", sz, NSTR__MAX_SIZE);
+
 	nstr__t nstr;
 
 	if (sz > NSTR__SSO_THRESHOLD) {
 		nstr.lg.sz = sz | NSTR__DPTR_BIT_MASK | NSTR__FREE_BIT_MASK;
 		nstr.lg.data = nstr__malloc(sz + 1, user);
+
+		nstr__assert(nstr.lg.data != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
 
 		nstr__memcpy((void*) nstr.lg.data, str, sz + 1);
 
@@ -200,16 +216,17 @@ nstr__t 		nstr__new 		(	const char* 	str 	,
 nstr__t 		nstr__ofsize 	(	size_t 			sz 		, 
 									void* 			user		)
 {
+	nstr__assert(sz <= NSTR__MAX_SIZE, "Size of str = %zd, Max Size allowed for nstr = %zd", sz, NSTR__MAX_SIZE);
+
 	nstr__t nstr;
-	char* data;
 
 	if (sz > NSTR__SSO_THRESHOLD) {
 		nstr.lg.sz = sz | NSTR__DPTR_BIT_MASK | NSTR__FREE_BIT_MASK;
 		nstr.lg.data = nstr__malloc(sz + 1, user);
 
-		data = (char*) &nstr.lg.data[0];
+		nstr__assert(nstr.lg.data != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
 
-		data[sz] = 0;
+		((char*) nstr.lg.data)[sz] = 0;
 
 	} else {
 		nstr.sm.sz = (uint8_t) sz;
@@ -222,9 +239,16 @@ nstr__t 		nstr__ofsize 	(	size_t 			sz 		,
 
 nstr__t 		nstr__move 		(	const char* str 	)
 {
+	nstr__assert(str != NULL, "Parameter str cannot be NULL");
+	size_t sz;
+
+	sz = nstr__strlen(str);
+
+	nstr__assert(sz <= NSTR__MAX_SIZE, "Size of str = %zd, Max Size allowed for nstr = %zd", sz, NSTR__MAX_SIZE);
+
 	nstr__t nstr;
 	
-	nstr.lg.sz = nstr__strlen(str) | NSTR__DPTR_BIT_MASK;
+	nstr.lg.sz = sz | NSTR__DPTR_BIT_MASK;
 	nstr.lg.data = str;
 
 	return nstr;
@@ -232,9 +256,13 @@ nstr__t 		nstr__move 		(	const char* str 	)
 
 nstr__t 		nstr__cmove		(	const char* str 	)
 {
+	nstr__assert(str != NULL, "Parameter str cannot be NULL");
+
 	size_t sz;
 
 	sz = nstr__strlen(str);
+
+	nstr__assert(sz <= NSTR__MAX_SIZE, "Size of str = %zd, Max Size allowed for nstr = %zd", sz, NSTR__MAX_SIZE);
 
 	if (sz > NSTR__SSO_THRESHOLD) {
 		return nstr__move(str);
@@ -247,6 +275,8 @@ nstr__t 		nstr__cmove		(	const char* str 	)
 void 			nstr__delete 	(	nstr__t* 	nstr 	,
 									void*		user 		)
 {
+	nstr__assert(nstr != NULL, "Parameter nstr cannot be NULL");
+
 	if (nstr->bsz.suffix & NSTR__FREE_BIT_MASK) {
 		nstr__free((void*) nstr->lg.data, user);
 	}
@@ -256,6 +286,8 @@ void 			nstr__delete 	(	nstr__t* 	nstr 	,
 
 const char* 	nstr__begin 	(	nstr__t* nstr 	) 
 {
+	nstr__assert(nstr != NULL, "Parameter nstr cannot be NULL");
+
 	if (nstr->bsz.suffix & NSTR__DPTR_BIT_MASK) {
 		return nstr->lg.data;
 	}
@@ -266,16 +298,22 @@ const char* 	nstr__begin 	(	nstr__t* nstr 	)
 
 const char* 	nstr__end 		(	nstr__t* nstr 	) 
 {
+	nstr__assert(nstr != NULL, "Parameter nstr cannot be NULL");
+
 	return nstr__begin(nstr) + nstr__size(nstr) - 1;
 }
 
 const char* 	nstr__endp1		( 	nstr__t* nstr 	) 
 {
+	nstr__assert(nstr != NULL, "Parameter nstr cannot be NULL");
+
 	return nstr__begin(nstr) + nstr__size(nstr);
 }
 
 size_t 			nstr__size 		( 	nstr__t* nstr 	) 
 {
+	nstr__assert(nstr != NULL, "Parameter nstr cannot be NULL");
+
 	if (nstr->bsz.suffix & NSTR__DPTR_BIT_MASK) {
 		return nstr->lg.sz & ~NSTR__RESERVED_BIT_MASK;
 	}
@@ -286,11 +324,15 @@ size_t 			nstr__size 		( 	nstr__t* nstr 	)
 
 const char* 	nstr__data 		(	nstr__t* nstr 	)
 {
+	nstr__assert(nstr != NULL, "Parameter nstr cannot be NULL");
+
 	return nstr__begin(nstr);
 }
 
 const char* 	nstr__tostr 	( 	nstr__t* nstr 	)
 {
+	nstr__assert(nstr != NULL, "Parameter nstr cannot be NULL");
+
 	return nstr__begin(nstr);
 }
 

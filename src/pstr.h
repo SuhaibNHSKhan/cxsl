@@ -67,6 +67,7 @@ const char*         pstr__tostr 		(const char* str);
 #undef pstr__free
 #undef pstr__strlen
 #undef pstr__memcpy
+#undef pstr__assert
 
 #if defined(CXSL_PSTR_MALLOC) || defined(CXSL_PSTR_REALLOC) || defined(CXSL_PSTR_FREE)
 	#if defined(CXSL_PSTR_MALLOC) && defined(CXSL_PSTR_REALLOC) && defined(CXSL_PSTR_FREE)
@@ -111,6 +112,13 @@ const char*         pstr__tostr 		(const char* str);
 	#define pstr__memcpy(dest, src, sz) memcpy(dest, src, sz)
 #endif
 
+#if defined(CXSL_ASSERT)
+	#define pstr__assert(check, format, ...) CXSL_ASSERT(check, message, __VA_ARGS__)
+#else
+	#include <assert.h>
+	#define pstr__assert(check, message, ...) assert(check)
+#endif
+
 // ----------------------- types -------------------------- //
 
 typedef struct pstr__header_t {
@@ -128,40 +136,50 @@ typedef struct pstr__t {
 const char*         pstr__new			(	const char* 	str 	, 
 											void* 			user		) 
 {
+	pstr__assert(str != NULL, "Parameter str cannot be NULL");
+
 	size_t sz;
 	pstr__t* pstr;
+	char* out;
 
 	sz = pstr__strlen(str);
 	pstr = pstr__malloc(sizeof(pstr__header_t) + sz + 1, user);
 
+	pstr__assert(pstr != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
+
 	pstr->header.sz = sz;
 
-	char* ostr = &pstr->buff[0];
+	out = &pstr->buff[0];
 
-	pstr__memcpy((void*) ostr, (void*) str, sz + 1);
+	pstr__memcpy((void*) out, (void*) str, sz + 1);
 
-	return ostr;
+	return out;
 }
 
 const char*         pstr__ofsize		(	size_t 		sz 		, 
 											void* 		user		) 
 {
 	pstr__t* pstr;
+	char* out;
 
 	pstr = pstr__malloc(sizeof(pstr__header_t) + sz + 1, user);
 
+	pstr__assert(pstr != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
+
 	pstr->header.sz = sz;
 
-	char* str = &pstr->buff[0];
+	out = &pstr->buff[0];
 
-	str[sz] = 0;
+	out[sz] = 0;
 
-	return str;
+	return out;
 }
 
 void				pstr__delete 		(	const char* 	str 	, 
 											void* 			user		) 
 {
+	pstr__assert(str != NULL, "Parameter str cannot be NULL");
+
 	pstr__free((void*) (str - sizeof(pstr__header_t)), user);
 }
 
@@ -170,6 +188,8 @@ void				pstr__delete 		(	const char* 	str 	,
 
 size_t   			pstr__len 			(	const char* str 	) 
 {
+	pstr__assert(str != NULL, "Parameter str cannot be NULL");
+
 	pstr__t* pstr;
 
 	pstr = (pstr__t*) (str - sizeof(size_t));
@@ -179,21 +199,29 @@ size_t   			pstr__len 			(	const char* str 	)
 
 const char*         pstr__begin 		(	const char* str 	) 
 {
+	pstr__assert(str != NULL, "Parameter str cannot be NULL");
+
 	return str;
 }
 
 const char*         pstr__end 			(	const char* str 	) 
 {
+	pstr__assert(str != NULL, "Parameter str cannot be NULL");
+
 	return str + pstr__len(str) - 1;
 }
 
 const char*         pstr__endp1 		(	const char* str 	) 
 {
+	pstr__assert(str != NULL, "Parameter str cannot be NULL");
+
 	return str + pstr__len(str);
 }
 
 const char*         pstr__tostr 		(	const char* str 	) 
 {
+	pstr__assert(str != NULL, "Parameter str cannot be NULL");
+
 	return str;
 }
 
