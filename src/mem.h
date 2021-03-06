@@ -1,9 +1,7 @@
-#ifndef MEM_H
-#define MEM_H
+#ifndef CXSL_MEM_H
+#define CXSL_MEM_H
 
 #include <stdint.h>
-
-#undef CXSL__DEC
 
 #ifdef CXSL_DEC
 	#define CXSL__DEC(name) CXSL_DEF(name)
@@ -19,10 +17,8 @@
 
 // ----------------------- declarations -------------------------- //
 
-void cxsl__memcpy	(void* dest, const void* src, size_t sz);
-void cxsl__memset	(void* dest, uint8_t b, size_t sz);
-
-
+void 	cxsl__memcpy	(void* dest, const void* src, size_t sz);
+void 	cxsl__memset	(void* dest, uint8_t b, size_t sz);
 
 #endif
 

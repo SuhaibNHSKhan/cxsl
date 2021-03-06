@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#define CXSL_MEM_IMPLEMENTATION
+#define CXSL_STR_IMPLEMENTATION
+#include "mem.h"
+#include "str.h"
+
 void* my_malloc(size_t sz, void* user) {
 	printf("my_malloc\n");
 	return malloc(sz);
@@ -17,15 +22,34 @@ void my_free(void* ptr, void* user) {
 	free(ptr);
 }
 
+#if 0
+#define CXSL_PSTR_MALLOC(sz, user) my_malloc(sz, user)
+#define CXSL_PSTR_REALLOC(ptr, sz, user) my_realloc(ptr, sz, user)
+#define CXSL_PSTR_FREE(ptr, user) my_free(ptr, user)
+
+#define CXSL_PSTRB_MALLOC(sz, user) my_malloc(sz, user)
+#define CXSL_PSTRB_REALLOC(ptr, sz, user) my_realloc(ptr, sz, user)
+#define CXSL_PSTRB_FREE(ptr, user) my_free(ptr, user)
+
+#define CXSL_NSTR_MALLOC(sz, user) my_malloc(sz, user)
+#define CXSL_NSTR_REALLOC(ptr, sz, user) my_realloc(ptr, sz, user)
+#define CXSL_NSTR_FREE(ptr, user) my_free(ptr, user)
+#else
 #define CXSL_MALLOC(sz, user) my_malloc(sz, user)
 #define CXSL_REALLOC(ptr, sz, user) my_realloc(ptr, sz, user)
 #define CXSL_FREE(ptr, user) my_free(ptr, user)
+#endif
 
-#define NSTR_IMPLEMENTATION
+#define NSTR_EXTRA_BYTES 24
+#define CXSL_NSTR_IMPLEMENTATION
 #include "nstr.h"
 
-#define PSTRB_IMPLEMENTATION
+#define CXSL_PSTRB_IMPLEMENTATION
 #include "pstrb.h"
+
+#define CXSL_PSTR_IMPLEMENTATION
+#include "pstr.h"
+
 
 void t2_1() {
 	nstr_t str1 = nstr_new("Hello", NULL);

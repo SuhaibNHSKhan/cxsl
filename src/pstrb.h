@@ -1,19 +1,25 @@
-#ifndef PSTRB_H
-#define PSTRB_H
+#ifndef CXSL_PSTRB_H
+#define CXSL_PSTRB_H
 
 #include <stdint.h>
 
-#ifndef PSTRB_DEC
-	#define PSTRB_DEC(name) pstrb_##name
+#undef PSTRB__DEC
+#undef PSTRB__TYPE
+
+#ifdef CXSL_PSTRB_DEC
+	#define PSTRB__DEC(name) CXSL_PSTRB_DEC(name)
+#else
+	#define PSTRB__DEC(name) pstrb_##name
 #endif // PSTRB_DEC
 
-#define PSTRB_TYPE(name) PSTRB_DEC(name)##_t
+#define PSTRB__TYPE(name) PSTRB__DEC(name)##_t
 
 // undefine 
 #undef pstrb__new
 #undef pstrb__ofsize
 #undef pstrb__ofcap
 #undef pstrb__delete
+
 #undef pstrb__concat_cstr
 #undef pstrb__concat
 
@@ -29,24 +35,25 @@
 
 
 // definitions
-#define pstrb__new			PSTRB_DEC(new)
-#define pstrb__ofsize		PSTRB_DEC(ofsize)
-#define pstrb__ofcap 		PSTRB_DEC(ofcap)
-#define pstrb__delete		PSTRB_DEC(delete)
+#define pstrb__new			PSTRB__DEC(new)
+#define pstrb__ofsize		PSTRB__DEC(ofsize)
+#define pstrb__ofcap 		PSTRB__DEC(ofcap)
+#define pstrb__delete		PSTRB__DEC(delete)
 
-#define pstrb__concat_cstr 	PSTRB_DEC(concat_cstr)
-#define pstrb__concat 		PSTRB_DEC(concat)
+#define pstrb__concat_cstr 	PSTRB__DEC(concat_cstr)
+#define pstrb__concat 		PSTRB__DEC(concat)
 
-#define pstrb__len 			PSTRB_DEC(len)
-#define pstrb__cap 			PSTRB_DEC(cap)
-#define pstrb__begin 		PSTRB_DEC(begin)
-#define pstrb__end 			PSTRB_DEC(end)
-#define pstrb__endp1 		PSTRB_DEC(endp1)
-#define pstrb__tostr 		PSTRB_DEC(tostr)
+#define pstrb__len 			PSTRB__DEC(len)
+#define pstrb__cap 			PSTRB__DEC(cap)
+#define pstrb__begin 		PSTRB__DEC(begin)
+#define pstrb__end 			PSTRB__DEC(end)
+#define pstrb__endp1 		PSTRB__DEC(endp1)
+#define pstrb__tostr 		PSTRB__DEC(tostr)
 
-#define pstrb__t 			PSTRB_DEC(t)
-#define pstrb__header_t		PSTRB_TYPE(header)
+#define pstrb__t 			PSTRB__DEC(t)
+#define pstrb__header_t		PSTRB__TYPE(header)
 	
+// ----------------------- declarations -------------------------- //
 
 char*           pstrb__new			(const char* str, void* user);
 char*           pstrb__ofsize		(size_t sz, void* user);
@@ -64,9 +71,11 @@ char*           pstrb__endp1 		(char* str);
 char*           pstrb__tostr 		(char* str);
 
 
-#endif // PSTRB_H
+#endif // CXSL_PSTRB_H
 
-#ifdef PSTRB_IMPLEMENTATION
+#ifdef CXSL_PSTRB_IMPLEMENTATION
+
+#undef CXSL_PSTRB_IMPLEMENTATION
 
 #undef pstrb__malloc
 #undef pstrb__realloc
@@ -74,13 +83,13 @@ char*           pstrb__tostr 		(char* str);
 #undef pstrb__strlen
 #undef pstrb__memcpy
 
-#if defined(PSTRB_MALLOC) || defined(PSTRB_REALLOC) || defined(PSTRB_FREE)
-	#if defined(PSTRB_MALLOC) && defined(PSTRB_REALLOC) && defined(PSTRB_FREE)
-		#define pstrb__malloc(sz, user) PSTRB_MALLOC(sz, user)
-		#define pstrb__realloc(ptr, sz, user) PSTRB_REALLOC(ptr, sz, user)
-		#define pstrb__free(ptr, user) PSTRB_FREE(ptr, user)
+#if defined(CXSL_PSTRB_MALLOC) || defined(CXSL_PSTRB_REALLOC) || defined(CXSL_PSTRB_FREE)
+	#if defined(CXSL_PSTRB_MALLOC) && defined(CXSL_PSTRB_REALLOC) && defined(CXSL_PSTRB_FREE)
+		#define pstrb__malloc(sz, user) CXSL_PSTRB_MALLOC(sz, user)
+		#define pstrb__realloc(ptr, sz, user) CXSL_PSTRB_REALLOC(ptr, sz, user)
+		#define pstrb__free(ptr, user) CXSL_PSTRB_FREE(ptr, user)
 	#else
-		#error If any one of PSTRB_MALLOC, PSTRB_REALLOC, PSTRB_FREE is defined, then all of them must be defined
+		#error If any one of CXSL_PSTRB_MALLOC, CXSL_PSTRB_REALLOC, CXSL_PSTRB_FREE is defined, then all of them must be defined
 	#endif
 
 #elif defined(CXSL_MALLOC) || defined(CXSL_REALLOC) || defined(CXSL_FREE)
@@ -99,8 +108,8 @@ char*           pstrb__tostr 		(char* str);
 	#define pstrb__free(ptr, user) free(ptr)
 #endif
 
-#if defined(PSTRB_STRLEN)
-	#define pstrb__strlen(str) PSTRB_STRLEN(str)
+#if defined(CXSL_PSTRB_STRLEN)
+	#define pstrb__strlen(str) CXSL_PSTRB_STRLEN(str)
 #elif defined(CXSL_STRLEN)
 	#define pstrb__strlen(str) CXSL_STRLEN(str)
 #else
@@ -108,8 +117,8 @@ char*           pstrb__tostr 		(char* str);
 	#define pstrb__strlen(str) strlen(str)
 #endif
 
-#if defined(PSTRB_MEMCPY)
-	#define pstrb__memcpy(dest, src, sz) PSTRB_MEMCPY(dest, src, sz)
+#if defined(CXSL_PSTRB_MEMCPY)
+	#define pstrb__memcpy(dest, src, sz) CXSL_PSTRB_MEMCPY(dest, src, sz)
 #elif defined(CXSL_MEMCPY)
 	#define pstrb__memcpy(dest, src, sz) CXSL_MEMCPY(dest, src, sz)
 #else
@@ -292,14 +301,18 @@ char* pstrb__concat 	(	char*		 	str 		,
 
 size_t pstrb__len	(	char* str 	) 
 {
-	pstrb__header_t* pstrbh = (pstrb__header_t*) (str - sizeof(pstrb__header_t));
+	pstrb__header_t* pstrbh;
+
+	pstrbh = (pstrb__header_t*) (str - sizeof(pstrb__header_t));
 
 	return pstrbh->sz;
 }
 
 size_t pstrb__cap 	(	char* str 	) 
 {
-	pstrb__header_t* pstrbh = (pstrb__header_t*) (str - sizeof(pstrb__header_t));
+	pstrb__header_t* pstrbh;
+
+	pstrbh = (pstrb__header_t*) (str - sizeof(pstrb__header_t));
 
 	return pstrbh->cap;
 }
@@ -324,5 +337,4 @@ char* pstrb__tostr (	char* str 	)
 	return str;
 }
 
-#undef PSTRB_IMPLEMENTATION
 #endif // PSTRB_IMPLEMENTATION

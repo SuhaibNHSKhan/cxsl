@@ -1,20 +1,43 @@
-#ifndef NSTR_H
-#define NSTR_H
+#ifndef CXSL_NSTR_H
+#define CXSL_NSTR_H
 
 #include <stdint.h>
 
-#undef NSTR_TYPE
-#undef NSTR_SSO_THRESHOLD
-#undef NSTR_SIZE_T_HIGH_BIT_MASK
+#undef NSTR__TYPE
+#undef NSTR__SSO_THRESHOLD_BASE
+#undef NSTR__SSO_THRESHOLD
+#undef NSTR__DPTR_BIT_MASK
+#undef NSTR__FREE_BIT_MASK
+#undef NSTR__RESERVED_BIT_MASK
+#undef NSTR__DEC
+#undef NSTR__EXTRA_BYTES
 
-#ifndef NSTR_DEC
-	#define NSTR_DEC(name) nstr_##name
+#ifdef CXSL_NSTR_DEC
+	#define NSTR__DEC(name) CXSL_NSTR_DEC(name)
+#else
+	#define NSTR__DEC(name) nstr_##name
 #endif
 
-#define NSTR_TYPE(name) NSTR_DEC(name)##_t
+#ifdef CXSL_NSTR_EXTRA_BYTES
+	#define NSTR__EXTRA_BYTES CXSL_NSTR_EXTRA_BYTES
+#else
+	#define NSTR__EXTRA_BYTES 0
+#endif
 
-#define NSTR_SSO_THRESHOLD 14
-#define NSTR_SIZE_T_HIGH_BIT_MASK (1ULL << (sizeof(size_t) * 8 - 1))
+#define NSTR__TYPE(name) NSTR__DEC(name)##_t
+
+#define NSTR__SSO_THRESHOLD_BASE 14
+#define NSTR__SSO_THRESHOLD (NSTR__SSO_THRESHOLD_BASE + NSTR__EXTRA_BYTES)
+
+#if NSTR__SSO_THRESHOLD > 64
+	#undef NSTR__SSO_THRESHOLD
+	#define NSTR__SSO_THRESHOLD 64
+#endif
+
+#define NSTR__DPTR_BIT_MASK   	   (1ULL << (sizeof(size_t) * 8 - 1))
+#define NSTR__FREE_BIT_MASK      	(1ULL << (sizeof(size_t) * 8 - 2))
+#define NSTR__RESERVED_BIT_MASK 	(NSTR__DPTR_BIT_MASK | NSTR__FREE_BIT_MASK)
+
 
 // undefine
 #undef nstr__empty
@@ -33,20 +56,21 @@
 #undef nstr__t
 
 // definitions
-#define nstr__empty 		NSTR_DEC(empty)
-#define nstr__new 			NSTR_DEC(new)
-#define nstr__ofsize 		NSTR_DEC(ofsize)
-#define nstr__move 			NSTR_DEC(move)
-#define nstr__delete 		NSTR_DEC(delete)
+#define nstr__empty 		NSTR__DEC(empty)
+#define nstr__new 			NSTR__DEC(new)
+#define nstr__ofsize 		NSTR__DEC(ofsize)
+#define nstr__move 			NSTR__DEC(move)
+#define nstr__cmove			NSTR__DEC(cmove)
+#define nstr__delete 		NSTR__DEC(delete)
 
-#define nstr__begin 		NSTR_DEC(begin)
-#define nstr__end 			NSTR_DEC(end)
-#define nstr__endp1 		NSTR_DEC(endp1)
-#define nstr__size 			NSTR_DEC(size)
-#define nstr__data 			NSTR_DEC(data)
-#define nstr__tostr 		NSTR_DEC(tostr)
+#define nstr__begin 		NSTR__DEC(begin)
+#define nstr__end 			NSTR__DEC(end)
+#define nstr__endp1 		NSTR__DEC(endp1)
+#define nstr__size 			NSTR__DEC(size)
+#define nstr__data 			NSTR__DEC(data)
+#define nstr__tostr 		NSTR__DEC(tostr)
 
-#define nstr__t 			NSTR_DEC(t)
+#define nstr__t 			NSTR__DEC(t)
 
 // ----------------------- types -------------------------- //
 
@@ -55,27 +79,32 @@ typedef struct nstr__t {
 	union {
 		struct {
 			const char* data;
+			#if NSTR__EXTRA_BYTES
+				uint8_t extra[NSTR__EXTRA_BYTES];
+			#endif
 			size_t sz;	
 		} lg;
 
 		struct {
-			char data[sizeof(size_t) * 2 - 1];
+			char data[sizeof(size_t) * 2 + NSTR__EXTRA_BYTES - 1];
 			uint8_t sz;
 		} sm;
 
 		struct {
-			size_t buff[2];
+			size_t prefix[2 + NSTR__EXTRA_BYTES / sizeof(size_t) - 1];
+			size_t suffix;
 		} bsz;
 	};
 	
 } nstr__t;
 
-// ----------------------- definitions -------------------------- //
+// ----------------------- declarations -------------------------- //
 
 nstr__t 		nstr__empty 	();
 nstr__t 		nstr__new 		(const char* str, void* user);
 nstr__t 		nstr__ofsize 	(size_t sz, void* user);
 nstr__t 		nstr__move 		(const char* str);
+nstr__t 		nstr__cmove		(const char* str);
 void 			nstr__delete 	(nstr__t* nstr, void* user);
 
 const char* 	nstr__begin 	(nstr__t* nstr);
@@ -88,7 +117,9 @@ const char* 	nstr__tostr 	(nstr__t* nstr);
 
 #endif // NSTR_H
 
-#ifdef NSTR_IMPLEMENTATION
+#ifdef CXSL_NSTR_IMPLEMENTATION
+
+#undef CXSL_NSTR_IMPLEMENTATION
 
 #undef nstr__malloc
 #undef nstr__realloc
@@ -96,13 +127,13 @@ const char* 	nstr__tostr 	(nstr__t* nstr);
 #undef nstr__strlen
 #undef nstr__memcpy
 
-#if defined(NSTR_MALLOC) || defined(NSTR_REALLOC) || defined(NSTR_FREE)
-	#if defined(NSTR_MALLOC) && defined(NSTR_REALLOC) && defined(NSTR_FREE)
-		#define nstr__malloc(sz, user) NSTR_MALLOC(sz, user)
-		#define nstr__realloc(ptr, sz, user) NSTR_REALLOC(ptr, sz, user)
-		#define nstr__free(ptr, user) NSTR_FREE(ptr, user)
+#if defined(CXSL_NSTR_MALLOC) || defined(CXSL_NSTR_REALLOC) || defined(CXSL_NSTR_FREE)
+	#if defined(CXSL_NSTR_MALLOC) && defined(CXSL_NSTR_REALLOC) && defined(CXSL_NSTR_FREE)
+		#define nstr__malloc(sz, user) CXSL_NSTR_MALLOC(sz, user)
+		#define nstr__realloc(ptr, sz, user) CXSL_NSTR_REALLOC(ptr, sz, user)
+		#define nstr__free(ptr, user) CXSL_NSTR_FREE(ptr, user)
 	#else
-		#error If any one of NSTR_MALLOC, NSTR_REALLOC, NSTR_FREE is defined, then all of them must be defined
+		#error If any one of CXSL_NSTR_MALLOC, CXSL_NSTR_REALLOC, CXSL_NSTR_FREE is defined, then all of them must be defined
 	#endif
 
 #elif defined(CXSL_MALLOC) || defined(CXSL_REALLOC) || defined(CXSL_FREE)
@@ -121,8 +152,8 @@ const char* 	nstr__tostr 	(nstr__t* nstr);
 	#define nstr__free(ptr, user) free(ptr)
 #endif
 
-#if defined(NSTR_STRLEN)
-	#define nstr__strlen(str) NSTR_STRLEN(str)
+#if defined(CXSL_NSTR_STRLEN)
+	#define nstr__strlen(str) CXSL_NSTR_STRLEN(str)
 #elif defined(CXSL_STRLEN)
 	#define nstr__strlen(str) CXSL_STRLEN(str)
 #else
@@ -130,8 +161,8 @@ const char* 	nstr__tostr 	(nstr__t* nstr);
 	#define nstr__strlen(str) strlen(str)
 #endif
 
-#if defined(NSTR_MEMCPY)
-	#define nstr__memcpy(dest, src, sz) NSTR_MEMCPY(dest, src, sz)
+#if defined(CXSL_NSTR_MEMCPY)
+	#define nstr__memcpy(dest, src, sz) CXSL_NSTR_MEMCPY(dest, src, sz)
 #elif defined(CXSL_MEMCPY)
 	#define nstr__memcpy(dest, src, sz) CXSL_MEMCPY(dest, src, sz)
 #else
@@ -152,8 +183,8 @@ nstr__t 		nstr__new 		(	const char* 	str 	,
 	size_t sz = nstr__strlen(str);
 	nstr__t nstr;
 
-	if (sz > NSTR_SSO_THRESHOLD) {
-		nstr.lg.sz = sz | NSTR_SIZE_T_HIGH_BIT_MASK;
+	if (sz > NSTR__SSO_THRESHOLD) {
+		nstr.lg.sz = sz | NSTR__DPTR_BIT_MASK | NSTR__FREE_BIT_MASK;
 		nstr.lg.data = nstr__malloc(sz + 1, user);
 
 		nstr__memcpy((void*) nstr.lg.data, str, sz + 1);
@@ -172,8 +203,8 @@ nstr__t 		nstr__ofsize 	(	size_t 			sz 		,
 	nstr__t nstr;
 	char* data;
 
-	if (sz > NSTR_SSO_THRESHOLD) {
-		nstr.lg.sz = sz | NSTR_SIZE_T_HIGH_BIT_MASK;
+	if (sz > NSTR__SSO_THRESHOLD) {
+		nstr.lg.sz = sz | NSTR__DPTR_BIT_MASK | NSTR__FREE_BIT_MASK;
 		nstr.lg.data = nstr__malloc(sz + 1, user);
 
 		data = (char*) &nstr.lg.data[0];
@@ -193,16 +224,30 @@ nstr__t 		nstr__move 		(	const char* str 	)
 {
 	nstr__t nstr;
 	
-	nstr.lg.sz = nstr__strlen(str) | NSTR_SIZE_T_HIGH_BIT_MASK;
+	nstr.lg.sz = nstr__strlen(str) | NSTR__DPTR_BIT_MASK;
 	nstr.lg.data = str;
 
 	return nstr;
 }
 
+nstr__t 		nstr__cmove		(	const char* str 	)
+{
+	size_t sz;
+
+	sz = nstr__strlen(str);
+
+	if (sz > NSTR__SSO_THRESHOLD) {
+		return nstr__move(str);
+
+	} else {
+		return nstr__new(str, NULL);
+	}
+}
+
 void 			nstr__delete 	(	nstr__t* 	nstr 	,
 									void*		user 		)
 {
-	if (nstr->bsz.buff[1] & NSTR_SIZE_T_HIGH_BIT_MASK) {
+	if (nstr->bsz.suffix & NSTR__FREE_BIT_MASK) {
 		nstr__free((void*) nstr->lg.data, user);
 	}
 }
@@ -211,7 +256,7 @@ void 			nstr__delete 	(	nstr__t* 	nstr 	,
 
 const char* 	nstr__begin 	(	nstr__t* nstr 	) 
 {
-	if (nstr->bsz.buff[1] & NSTR_SIZE_T_HIGH_BIT_MASK) {
+	if (nstr->bsz.suffix & NSTR__DPTR_BIT_MASK) {
 		return nstr->lg.data;
 	}
 	else {
@@ -231,8 +276,8 @@ const char* 	nstr__endp1		( 	nstr__t* nstr 	)
 
 size_t 			nstr__size 		( 	nstr__t* nstr 	) 
 {
-	if (nstr->bsz.buff[1] & NSTR_SIZE_T_HIGH_BIT_MASK) {
-		return nstr->lg.sz & ~NSTR_SIZE_T_HIGH_BIT_MASK;
+	if (nstr->bsz.suffix & NSTR__DPTR_BIT_MASK) {
+		return nstr->lg.sz & ~NSTR__RESERVED_BIT_MASK;
 	}
 	else {
 		return (size_t) nstr->sm.sz;
@@ -249,4 +294,4 @@ const char* 	nstr__tostr 	( 	nstr__t* nstr 	)
 	return nstr__begin(nstr);
 }
 
-#endif // NSTR_H
+#endif // NSTR_IMPLEMENTATION
