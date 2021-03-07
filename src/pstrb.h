@@ -82,6 +82,9 @@ char*           pstrb__tostr 		(char* str);
 #undef pstrb__free
 #undef pstrb__strlen
 #undef pstrb__memcpy
+#undef pstrb__null_string
+
+#define pstrb__null_string PSTRB__DEC(internal__null_string)
 
 #if defined(CXSL_PSTRB_MALLOC) || defined(CXSL_PSTRB_REALLOC) || defined(CXSL_PSTRB_FREE)
 	#if defined(CXSL_PSTRB_MALLOC) && defined(CXSL_PSTRB_REALLOC) && defined(CXSL_PSTRB_FREE)
@@ -126,6 +129,13 @@ char*           pstrb__tostr 		(char* str);
 	#define pstrb__memcpy(dest, src, sz) memcpy(dest, src, sz)
 #endif
 
+#if defined(CXSL_ASSERT)
+	#define pstrb__assert(check, format, ...) CXSL_ASSERT(check, message, __VA_ARGS__)
+#else
+	#include <assert.h>
+	#define pstrb__assert(check, message, ...) assert(check)
+#endif
+
 // ----------------------- types -------------------------- //
 
 typedef struct pstrb__header_t {
@@ -140,62 +150,90 @@ typedef struct pstrb__t {
 
 } pstrb__t;
 
+const uint8_t pstrb__null_string[32] = {	0, 0, 0, 0, 0, 0, 0, 0,
+											0, 0, 0, 0, 0, 0, 0, 0,
+											0, 0, 0, 0, 0, 0, 0, 0,
+											0, 0, 0, 0, 0, 0, 0, 0	};
+
 // ----------------------- init and free -------------------------- // 
 
-char* pstrb__new 	(	const char*      str    , 
-						void*            user		)							 
+char*           pstrb__new			(	const char*      str    , 
+										void*            user		)							 
 {
+	pstrb__assert(str != NULL, "Parameter str cannot be NULL");
+
 	size_t sz, cap;
 	pstrb__t* pstrb;
 	char* out;
 
 	sz = pstrb__strlen(str);
-	cap = sz * 2 + 1;
 
-	pstrb = pstrb__malloc(sizeof(pstrb__header_t) + cap + 1, user);
+	if (sz == 0) {
+		pstrb = (pstrb__t*) &pstrb__null_string[0];
 
-	pstrb->header.cap = cap;
-	pstrb->header.sz = sz;
+		out = &pstrb->buff[0];
 
-	out = &pstrb->buff[0];
+	} else {
+		cap = sz * 2 + 1;
 
-	pstrb__memcpy((void*) out, (void*) str, sz);
+		pstrb = pstrb__malloc(sizeof(pstrb__header_t) + cap + 1, user);
 
-	out[sz] = 0;
+		pstrb__assert(pstrb != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
+
+		pstrb->header.cap = cap;
+		pstrb->header.sz = sz;
+
+		out = &pstrb->buff[0];
+
+		pstrb__memcpy((void*) out, (void*) str, sz + 1);
+	}
 
 	return out;
 }
 
-char* pstrb__ofsize    (		size_t			sz 		, 
-								void*			user		)
+char*           pstrb__ofsize		(		size_t			sz 		, 
+											void*			user		)
 {
 	size_t cap;
 	pstrb__t* pstrb;
 	char* out;
 
-	cap = sz * 2 + 1;
+	if (sz == 0) {
+		pstrb = (pstrb__t*) &pstrb__null_string[0];
 
-	pstrb = pstrb__malloc(sizeof(pstrb__header_t) + cap + 1, user);
+		out = &pstrb->buff[0];
 
-	pstrb->header.cap = cap;
-	pstrb->header.sz = sz;
+	} else {
+		cap = sz * 2 + 1;
 
-	out = &pstrb->buff[0];
+		pstrb = pstrb__malloc(sizeof(pstrb__header_t) + cap + 1, user);
 
-	out[sz] = 0;
+		pstrb__assert(pstrb != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
+
+		pstrb->header.cap = cap;
+		pstrb->header.sz = sz;
+
+		out = &pstrb->buff[0];
+
+		out[sz] = 0;
+	}
 
 	return out;	
 }
 
-char* pstrb__ofcap		(	size_t			cap 	, 
-							void*			user		) 
+char*           pstrb__ofcap 		(	size_t			cap 	, 
+										void*			user		) 
 {
+	pstrb__assert(cap > 0, "Parameter cap has to be greater than 0");
+
 	size_t sz = 0;
 	pstrb__t* pstrb;
 	char* out;
 
 	pstrb = pstrb__malloc(sizeof(pstrb__header_t) + cap + 1, user);
 
+	pstrb__assert(pstrb != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
+
 	pstrb->header.cap = cap;
 	pstrb->header.sz = sz;
 
@@ -206,20 +244,30 @@ char* pstrb__ofcap		(	size_t			cap 	,
 	return out;	
 }
 
-void pstrb__delete	(	char*		str 	, 
-						void* 		user		) 
+void			pstrb__delete 		(	char*		str 	, 
+										void* 		user		) 
 {
-	pstrb__free((void*) (str - sizeof(pstrb__header_t)), user);
+	pstrb__assert(str != NULL, "Parameter str cannot be NULL");
+
+	pstrb__t* pstrb = (pstrb_t*) (str - sizeof(pstrb__header_t));
+	pstrb__t* null_string = (pstrb_t*) &pstrb__null_string[0];
+
+	if (pstrb != null_string) {
+		pstrb__free((void*) (pstrb), user);	
+	}
 }
 
 // ----------------------- functional -------------------------- // 
 
-char* pstrb__concat_cstr 	(	char*			str 		, 
-								const char* 	cstr 		, 
-								void* 			user			) 
+char*           pstrb__concat_cstr	(	char*			str 		, 
+										const char* 	cstr 		, 
+										void* 			user			) 
 {
+	pstrb__assert(str != NULL, "Parameter str cannot be NULL");
+	pstrb__assert(cstr != NULL, "Parameter cstr cannot be NULL");
+
 	size_t remain, i, len, cap;
-	pstrb__t* pstrb;
+	pstrb__t *pstrb, *null_string;
 
 
 	pstrb = str - sizeof(pstrb__header_t);	
@@ -233,12 +281,20 @@ char* pstrb__concat_cstr 	(	char*			str 		,
 	if (remain == 0 && *cstr != 0) {
 		cap = pstrb__cap(str);
 		len = pstrb__strlen(cstr) + cap;
+		null_string = (pstrb_t*) &pstrb__null_string[0];
 
 		while (cap < len) {
 			cap = 2 * cap + 1;
 		}
 
-		pstrb = pstrb__realloc(pstrb, cap + 1, user);
+		if (pstrb == null_string) {
+			pstrb = pstrb__malloc(sizeof(pstrb__header_t) + cap + 1, user);
+		} else {
+			pstrb = pstrb__realloc(pstrb, sizeof(pstrb__header_t) + cap + 1, user);	
+		}
+
+		pstrb__assert(pstrb != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
+
 		pstrb->header.cap = cap;
 
 		str = &pstrb->buff[0];
@@ -254,14 +310,18 @@ char* pstrb__concat_cstr 	(	char*			str 		,
 	return str;
 }
 
-char* pstrb__concat 	(	char*		 	str 		, 
-							const char* 	src_st 		, 
-							const char* 	src_edp1	, 
-							void* user						) 
+char*           pstrb__concat 		(	char*		 	str 		, 
+										const char* 	src_st 		, 
+										const char* 	src_edp1	, 
+										void* user						) 
 {
+	pstrb__assert(str != NULL, "Parameter str cannot be NULL");
+	pstrb__assert(src_st != NULL, "Parameter src_st cannot be NULL");
+	pstrb__assert(src_edp1 != NULL, "Parameter src_edp1 cannot be NULL");
+
 	size_t i, cap, len, remain;
 	const char* curr;
-	pstrb__t* pstrb;
+	pstrb__t *pstrb, *null_string;
 
 	len = pstrb__len(str);
 	remain = pstrb__cap(str) - len;
@@ -276,12 +336,20 @@ char* pstrb__concat 	(	char*		 	str 		,
 	if (remain == 0 && curr != src_edp1) {
 		cap = pstrb__cap(str);
 		len = (size_t) ((uintptr_t) src_edp1 - (uintptr_t) src_st) + cap;
+		null_string = (pstrb_t*) &pstrb__null_string[0];
 
 		while (cap < len) {
 			cap = 2 * cap + 1;
 		}	
 
-		pstrb = pstrb__realloc(pstrb, cap + 1, user);
+		if (pstrb == null_string) {
+			pstrb = pstrb__malloc(sizeof(pstrb__header_t) + cap + 1, user);
+		} else {
+			pstrb = pstrb__realloc(pstrb, sizeof(pstrb__header_t) + cap + 1, user);	
+		}
+
+		pstrb__assert(pstrb != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
+
 		pstrb->header.cap = cap;
 
 		str = &pstrb->buff[0];
@@ -299,8 +367,10 @@ char* pstrb__concat 	(	char*		 	str 		,
 
 // ----------------------- data access -------------------------- // 
 
-size_t pstrb__len	(	char* str 	) 
+size_t          pstrb__len 			(	char* str 	) 
 {
+	pstrb__assert(str != NULL, "Parameter str cannot be NULL");
+
 	pstrb__header_t* pstrbh;
 
 	pstrbh = (pstrb__header_t*) (str - sizeof(pstrb__header_t));
@@ -308,8 +378,10 @@ size_t pstrb__len	(	char* str 	)
 	return pstrbh->sz;
 }
 
-size_t pstrb__cap 	(	char* str 	) 
+size_t          pstrb__cap 			(	char* str 	) 
 {
+	pstrb__assert(str != NULL, "Parameter str cannot be NULL");
+
 	pstrb__header_t* pstrbh;
 
 	pstrbh = (pstrb__header_t*) (str - sizeof(pstrb__header_t));
@@ -317,23 +389,31 @@ size_t pstrb__cap 	(	char* str 	)
 	return pstrbh->cap;
 }
 
-char* pstrb__begin 	(	char* str 	) 
+char*           pstrb__begin 		(	char* str 	) 
 {
+	pstrb__assert(str != NULL, "Parameter str cannot be NULL");
+
 	return str;
 }
 
-char* pstrb__end 	(	char* str 	) 
+char*           pstrb__end 			(	char* str 	) 
 {
+	pstrb__assert(str != NULL, "Parameter str cannot be NULL");
+
 	return str + pstrb__len(str) - 1;
 }
 
-char* pstrb__endp1 	(	char* str 	) 
+char*           pstrb__endp1 		(	char* str 	) 
 {
+	pstrb__assert(str != NULL, "Parameter str cannot be NULL");
+
 	return str + pstrb__len(str);
 }
 
-char* pstrb__tostr (	char* str 	) 
+char*           pstrb__tostr 		(	char* str 	) 
 {
+	pstrb__assert(str != NULL, "Parameter str cannot be NULL");
+	
 	return str;
 }
 

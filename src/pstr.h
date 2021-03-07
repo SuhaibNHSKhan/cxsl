@@ -131,6 +131,9 @@ typedef struct pstr__t {
 
 } pstr__t;
 
+const uint8_t pstr__null_string[16] =	 {	0, 0, 0, 0, 0, 0, 0, 0,
+											0, 0, 0, 0, 0, 0, 0, 0	};
+
 // ----------------------- init and free -------------------------- // 
 
 const char*         pstr__new			(	const char* 	str 	, 
@@ -143,15 +146,23 @@ const char*         pstr__new			(	const char* 	str 	,
 	char* out;
 
 	sz = pstr__strlen(str);
-	pstr = pstr__malloc(sizeof(pstr__header_t) + sz + 1, user);
 
-	pstr__assert(pstr != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
+	if (sz == 0) {
+		pstr = (pstr__t*) &pstr__null_string[0];
 
-	pstr->header.sz = sz;
+		out = &pstr->buff[0];
 
-	out = &pstr->buff[0];
+	} else {
+		pstr = pstr__malloc(sizeof(pstr__header_t) + sz + 1, user);
 
-	pstr__memcpy((void*) out, (void*) str, sz + 1);
+		pstr__assert(pstr != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
+
+		pstr->header.sz = sz;
+
+		out = &pstr->buff[0];
+
+		pstr__memcpy((void*) out, (void*) str, sz + 1);
+	}
 
 	return out;
 }
@@ -162,16 +173,23 @@ const char*         pstr__ofsize		(	size_t 		sz 		,
 	pstr__t* pstr;
 	char* out;
 
-	pstr = pstr__malloc(sizeof(pstr__header_t) + sz + 1, user);
+	if (sz == 0) {
+		pstr = (pstr__t*) &pstr__null_string[0];
 
-	pstr__assert(pstr != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
+		out = &pstr->buff[0];
 
-	pstr->header.sz = sz;
+	} else {
+		pstr = pstr__malloc(sizeof(pstr__header_t) + sz + 1, user);
 
-	out = &pstr->buff[0];
+		pstr__assert(pstr != NULL, "Failed allocating a buffer for string [size = %zd]", sz);
 
-	out[sz] = 0;
+		pstr->header.sz = sz;
 
+		out = &pstr->buff[0];
+
+		out[sz] = 0;	
+	}
+	
 	return out;
 }
 
@@ -180,7 +198,12 @@ void				pstr__delete 		(	const char* 	str 	,
 {
 	pstr__assert(str != NULL, "Parameter str cannot be NULL");
 
-	pstr__free((void*) (str - sizeof(pstr__header_t)), user);
+	pstr__t* pstr = (pstr_t*) (str - sizeof(pstr__header_t));
+	pstr__t* null_string = (pstr_t*) &pstr__null_string[0];
+
+	if (pstr != null_string) {
+		pstr__free((void*) (pstr), user);	
+	}
 }
 
 

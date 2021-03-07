@@ -1,6 +1,7 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #define CXSL_MEM_IMPLEMENTATION
 #define CXSL_STR_IMPLEMENTATION
@@ -106,6 +107,22 @@ void t2_2() {
 	nstr_delete(&str3, NULL);
 }
 
+void t3() {
+	char* s1 = pstrb_new("", NULL);
+	char* s2 = pstrb_new("", NULL);
+
+	printf("s1 ['%s'] == s2 ['%s'] : %d\n", s1, s2, s1 == s2);
+
+	s1 = pstrb_concat_cstr(s1, "Hello", NULL);
+	s2 = pstrb_concat_cstr(s2, " World!", NULL);
+
+	printf("s1 ['%s'] == s2 ['%s'] : %d\n", s1, s2, s1 == s2);	
+
+	s1 = pstrb_concat_cstr(s1, s2, NULL);
+
+	printf("s1 ['%s'] == s2 ['%s'] : %d\n", s1, s2, s1 == s2);	
+}
+
 #ifdef T4
 void t4() {
 	const char* str = pstr_new("Hello World", &my_malloc, NULL);
@@ -151,6 +168,7 @@ int main(int argc, char** argv) {
 	t2_2();
 	printf("\n--------------------------------\n");
 	t5_1();
-
+	printf("\n--------------------------------\n");
+	t3();
 
 }
