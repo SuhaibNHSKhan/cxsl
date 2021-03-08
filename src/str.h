@@ -13,7 +13,7 @@
 
 #define cxsl__cstrlen		CXSL__DEC(cstrlen)
 #define cxsl__ccontainsc	CXSL__DEC(ccontainsc)
-#define cxsl__cconcat		CXSL__DEC(cconcat)
+#define cxsl__cstrcat		CXSL__DEC(cstrcat)
 #define cxsl__cstrtok		CXSL__DEC(cstrtok)
 #define cxsl__ctrim			CXSL__DEC(ctrim)
 #define cxsl__csubstr		CXSL__DEC(csubstr)
@@ -39,10 +39,10 @@
 size_t 		cxsl__cstrlen		(const char* str);
 uint8_t 	cxsl__cstrhas		(const char* str, char ch);
 int8_t		cxsl__cstrcmp		(const char* str1, const char* str2);
-size_t 		cxsl__cstrlwr		(const char* str, char* out, size_t sz);
-size_t 		cxsl__cstrupr		(const char* str, char* out, size_t sz);
-size_t 		cxsl__cstrrev		(const char* str, char* out, size_t sz);
-size_t 		cxsl__cconcat		(const char* str1, const char* str2, char* out, size_t sz);
+size_t 		cxsl__cstrlwr		(const char* str, const char** context, char* out, size_t sz);
+size_t	 	cxsl__cstrupr		(const char* str, const char** context, char* out, size_t sz);
+size_t 		cxsl__cstrrev		(const char* str, const char**	context, char* out, size_t sz);
+size_t 		cxsl__cstrcat		(const char* str1, const char* str2, const char**	context, char* out, size_t sz);
 size_t 		cxsl__cstrtok		(const char** base, const char* delimiters, char* out, size_t sz);
 size_t 		cxsl__ctrim			(const char* str, char* out, size_t sz);
 size_t 		cxsl__csubstr 		(const char* str, size_t start_idx, char* out, size_t sz);
@@ -76,6 +76,19 @@ size_t 		cxsl__bsubstrn 		(const char* start, const char* endp1, size_t start_id
 	#include <assert.h>
 	#define cxsl__assert(check, message, ...) assert(check)
 #endif
+
+#define cxsl__conditionally_update_context(context, value) if (*(context)) *(context) = value
+#define cxsl__get_start(context, start) (context) ? *(context) : (start)
+
+#define cxsl__label_internal(func, label) func##_##label
+#define cxsl__label(func, label) cxsl__label_internal(func, label)
+#define cxsl__size_only_label(func) cxsl__label(func, size_only)
+#define cxsl__conditionally_goto_size_only(func, out) if (!out) goto cxsl__size_only_label(func)
+
+size_t 		cxsl__outstrsz		(size_t ret_val, size_t buffer_size) 
+{
+	return ret_val == 0 ? buffer_size - 1 : ret_val - 1;
+}
 
 // cstring functions
 
@@ -131,98 +144,165 @@ int8_t		cxsl__cstrcmp		(const char* str1, const char* str2)
 }
 
 size_t 		cxsl__cstrlwr		(	const char* 	str 		, 
+									const char**	context		,
 									char* 			out 		, 
 									size_t 			sz 				)
 {
 	cxsl__assert(str != NULL, "Parameter str cannot be NULL");
-	cxsl__assert(out != NULL, "Parameter out cannot be NULL");
 
-	size_t i, r;
+	const char* st = cxsl__get_start(context, str);
+	size_t i;
+
+	cxsl__conditionally_goto_size_only(cxsl__cstrlwr, out);
+
 	sz--;
 
-	for (i = 0; sz && *str; ++str, ++i, --sz) {
-		if (*str >= 'A' && *str <= 'Z') {
-			out[i] = (*str - 'A') + 'a';	
+	for (i = 0; sz && *st; ++st, ++i, --sz) {
+		if (*st >= 'A' && *st <= 'Z') {
+			out[i] = (*st - 'A') + 'a';	
+		} else {
+			out[i] = *st;	
 		}
 	}
 
 	out[i] = 0;
 
-	if (*str) {
-		for (r = 0; *str; ++str, ++r);
+	cxsl__conditionally_update_context(context, st);
 
-		return r;
-	} else {
-		return 0;
-	}
+	return *st ? 0 : i + 1;
+
+	cxsl__size_only_label(cxsl__cstrlwr):
+	
+	return (intptr_t) cxsl__cstrlen(st);
 }
 
 size_t 		cxsl__cstrupr		(	const char* 	str 		, 
+									const char**	context		,
 									char* 			out 		, 
 									size_t 			sz 				)
 {
 	cxsl__assert(str != NULL, "Parameter str cannot be NULL");
-	cxsl__assert(out != NULL, "Parameter out cannot be NULL");
 
-	size_t i, r;
+	const char* st = cxsl__get_start(context, str);
+	size_t i;
+
+	cxsl__conditionally_goto_size_only(cxsl__cstrlwr, out);
+
 	sz--;
 
-	for (i = 0; sz && *str; ++str, ++i, --sz) {
-		if (*str >= 'a' && *str <= 'z') {
-			out[i] = (*str - 'a') + 'A';	
+	for (i = 0; sz && *st; ++st, ++i, --sz) {
+		if (*st >= 'a' && *st <= 'z') {
+			out[i] = (*st - 'a') + 'A';	
+		} else {
+			out[i] = *st;	
 		}
 	}
 
 	out[i] = 0;
 
-	if (*str) {
-		for (r = 0; *str; ++str, ++r);
+	cxsl__conditionally_update_context(context, st);
 
-		return r;
-	} else {
-		return 0;
-	}
+	return *st ? 0 : i + 1;
+
+	cxsl__size_only_label(cxsl__cstrlwr):
+	
+	return (intptr_t) cxsl__cstrlen(st);
 }
 
-size_t 		cxsl__cstrrev		(	const char* 	str 		, 
+
+size_t 		cxsl__cstrrev		(	const char* 	str 		,
+									const char**	context 	,
 									char* 			out 		, 
 									size_t 			sz 				)
 {
 	cxsl__assert(str != NULL, "Parameter str cannot be NULL");
-	cxsl__assert(out != NULL, "Parameter out cannot be NULL");
+	
+	size_t i;
+	const char* sm1 = str - 1;
+	const char* ed  = str + cxsl__cstrlen(str) - 1;
 
-	return cxsl__bstrrev(str, str + cxsl__cstrlen(str), out, sz);
+	ed = cxsl__get_start(context, ed);
+
+	cxsl__conditionally_goto_size_only(cxsl__cstrrev, out);
+
+	sz--;
+
+	for (i = 0; sz && ed != sm1; --ed, --sz, ++i) {
+		out[i] = *ed;
+	}
+
+	out[i] = 0;
+
+	cxsl__conditionally_update_context(context, ed);
+
+	return ed != sm1 ? 0 : i + 1;
+
+	cxsl__size_only_label(cxsl__cstrrev):
+
+	return (size_t) ed - (size_t) sm1;
 }
 
-size_t 		cxsl__cconcat		(	const char* 	str1 	, 
+size_t 		cxsl__cstrcat		(	const char* 	str1 	, 
 									const char* 	str2 	, 
+									const char**	context ,
 									char* 			out 	,
 									size_t 			sz 			)
 {
 	cxsl__assert(str1 != NULL, "Parameter str1 cannot be NULL");
 	cxsl__assert(str2 != NULL, "Parameter str2 cannot be NULL");
 
-	cxsl__assert(out != NULL, "Parameter out cannot be NULL");
+	cxsl__conditionally_goto_size_only(cxsl__cstrcat, out);
 
-	size_t i, r;
+	char* curr;
+	size_t i;
 
+	i = 0;
 	sz--;
 
-	for (i = 0; sz && *str1; --sz, ++str1) {
-		out[i] = *str1;
+	if (!context) goto cxsl__label(cxsl__cstrcat, skip_context);
+
+	curr = (char*) *context;
+
+	intptr_t diff1 = (intptr_t) curr - (intptr_t) str1;
+	intptr_t diff2 = (intptr_t) curr - (intptr_t) str2;
+
+	if (diff2 < 0 || diff1 < diff2) {
+		goto cxsl__label(cxsl__cstrcat, direct_str1);
+	} else if (diff1 < 0 || diff2 < diff1) {
+		goto cxsl__label(cxsl__cstrcat, direct_str2);
+	} else {
+		cxsl__assert(0, "Reached unreachable code");
 	}
 
-	for (r = 0; *str1; ++str1, ++r);
+	cxsl__label(cxsl__cstrcat, skip_context):
 
-	for (; sz && *str2; --sz, ++str2) {
-		out[i] = *str2;
+	curr = (char*) str1; 
+
+	cxsl__label(cxsl__cstrcat, direct_str1):
+
+	for (; sz && *curr; --sz, ++curr, ++i) {
+		out[i] = *curr;
 	}
 
-	for (; *str2; ++str2, ++r);
+	if (!(*curr)) {
+		curr = (char*) str2;
 
+		cxsl__label(cxsl__cstrcat, direct_str2):
+
+		for (; sz && *curr; --sz, ++curr, ++i) {
+			out[i] = *curr;
+		}	
+	}
+	
 	out[i] = 0;
 
-	return r;
+	cxsl__conditionally_update_context(context, curr);
+
+	return *curr ? 0 : i + 1;
+
+	cxsl__size_only_label(cxsl__cstrcat):
+
+	return cxsl__cstrlen(str1) + cxsl__cstrlen(str2);
 }
 
 size_t 		cxsl__cstrtok		(	const char** 	base 		, 

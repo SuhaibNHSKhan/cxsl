@@ -123,21 +123,66 @@ void t3() {
 	printf("s1 ['%s'] == s2 ['%s'] : %d\n", s1, s2, s1 == s2);	
 }
 
-#ifdef T4
 void t4() {
-	const char* str = pstr_new("Hello World", &my_malloc, NULL);
+	const char* str = "Hello World thiis";
+	// const char* str = "";
+	const char* context = str;
 
-	printf("%s: %zd\n", str, pstr_len(str));
+	char buff[16];
 
-	pstr_for(s, str) {
-		printf("%c ", *s);
-	}
+	intptr_t sz = cxsl_cstrlwr(str, NULL, NULL, 0), rm;
 
-	printf("\n");
-	
-	pstr_free(str, &my_free, NULL);
+	printf("%Id\n", sz);
+
+	// for (;;) {
+	// 	sz = cxsl__cstrlwr(str, &context, buff, 16);
+	// 	rm = cxsl__cstrlwr(str, &context, NULL, 0);
+	// 	printf("%s [%zd, %zd]\n", buff, cxsl__outstrsz(sz, 16), rm);
+
+	// 	if (sz) break;
+	// } 
+
+	// while (sz = cxsl__cstrlwr(str, &context, buff, 16), !sz) {
+	// 	printf("%s [%zd]\n", buff, sz);
+	// }
+	// printf("%s [%zd]\n", buff, sz);
+
+	do {
+		sz = cxsl__cstrlwr(str, &context, buff, 16);
+		rm = cxsl__cstrlwr(str, &context, NULL, 0);
+		printf("%s [%zd, %zd]\n", buff, cxsl__outstrsz(sz, 16), rm);
+
+	} while (!sz);
+
+	printf("\n------------------------\n");
+
+	context = str + strlen(str) - 1;
+
+	do {
+		sz = cxsl__cstrrev(str, &context, buff, 16);
+		rm = cxsl__cstrrev(str, &context, NULL, 0);
+		printf("%s [%zd, %zd]\n", buff, cxsl__outstrsz(sz, 16), rm);
+
+	} while (!sz);
+
+	printf("\n------------------------\n");
+
+	const char* str1 = "Hello World this is the first string";
+	const char* str2 = " Hello World this is the second string";
+
+	context = str1;
+
+	sz = cxsl_cstrcat(str1, str2, NULL, NULL, 0);
+
+	printf("[%zd]\n------------\n", sz);
+
+	do {
+		sz = cxsl_cstrcat(str1, str2, &context, buff, 16);
+
+		printf("%s [%zd]\n", buff, sz);
+
+	} while (!sz);
 }
-#endif
 
 
 void t5_1() {
@@ -170,5 +215,7 @@ int main(int argc, char** argv) {
 	t5_1();
 	printf("\n--------------------------------\n");
 	t3();
+	printf("\n--------------------------------\n");
+	t4();
 
 }
