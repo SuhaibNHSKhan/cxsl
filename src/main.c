@@ -124,7 +124,7 @@ void t3() {
 }
 
 void t4() {
-	const char* str = "Hello World thiis";
+	const char* str = "Hello World thiis is a stupidly long sentence";
 	// const char* str = "";
 	const char* context = str;
 
@@ -182,6 +182,42 @@ void t4() {
 		printf("%s [%zd]\n", buff, sz);
 
 	} while (!sz);
+
+	printf("\n--------------------------------\n");
+
+	context = str;
+
+	for (;;) {
+		for (;;) {
+			sz = cxsl_cstrtok(str, " ", &context, buff, 4);
+			printf("%s|", buff);
+
+			if (sz) break;
+		}
+
+		printf("\n");
+		if (!context[0]) break;
+	}
+
+	str = " \t\r  Heo  afd e \r ef   \r\n ewfw e  wef  \t\n";
+	context = str;
+
+	sz = cxsl_cstrtrm(str, NULL, NULL, 0);
+
+	printf("[%zd]\n", sz);
+
+	for (;;) {
+		sz = cxsl_cstrtrm(str, &context, buff, 16);
+
+		size_t i = 0;
+		while (buff[i]) {
+			printf("0x%x ", buff[i]);
+			i++;
+		}
+		printf("|");
+
+		if (sz) break;
+	}
 }
 
 
