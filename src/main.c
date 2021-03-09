@@ -199,15 +199,15 @@ void t4() {
 		if (!context[0]) break;
 	}
 
-	str = " \t\r  Heo  afd e \r ef   \r\n ewfw e  wef  \t\n";
-	context = str;
+	const char* str3 = " \t\r  Heo  afd e \r ef   \r\n ewfw e  wef  \t\n";
+	context = str3;
 
-	sz = cxsl_cstrtrm(str, NULL, NULL, 0);
+	sz = cxsl_cstrtrm(str3, NULL, NULL, 0);
 
 	printf("[%zd]\n", sz);
 
 	for (;;) {
-		sz = cxsl_cstrtrm(str, &context, buff, 16);
+		sz = cxsl_cstrtrm(str3, &context, buff, 16);
 
 		size_t i = 0;
 		while (buff[i]) {
@@ -215,6 +215,57 @@ void t4() {
 			i++;
 		}
 		printf("|");
+
+		if (sz) break;
+	}
+
+	printf("\n--------------------------------\n");
+
+	context = str;
+
+	sz = cxsl_cstrsub(str, 1, NULL, NULL, 0);
+
+	printf("%s [%zd]\n", str, sz);
+
+	for (;;) {
+		sz = cxsl_cstrsub(str, 5, &context, buff, 16);
+		rm = cxsl_cstrsub(str, 5, &context, NULL, 0);
+
+		printf("%s [%zd, %zd]\n", buff, sz, rm);
+
+		if (sz) break;
+	}
+
+	printf("\n--------------------------------\n");
+
+	context = str;
+
+	sz = cxsl_cstrsubi(str, 5, 33, NULL, NULL, 0);
+
+	printf("%s [%zd]\n", str, sz);
+
+	for (;;) {
+		sz = cxsl_cstrsubi(str, 5, 33, &context, buff, 16);
+		rm = cxsl_cstrsubi(str, 5, 33, &context, NULL, 0);
+
+		printf("%s [%zd, %zd]\n", buff, sz, rm);
+
+		if (sz) break;
+	}
+
+	printf("\n--------------------------------\n");
+
+	context = str;
+
+	sz = cxsl_cstrsubn(str, 5, 30, NULL, NULL, 0);
+
+	printf("%s [%zd]\n", str, sz);
+
+	for (;;) {
+		sz = cxsl_cstrsubn(str, 5, 30, &context, buff, 16);
+		rm = cxsl_cstrsubn(str, 5, 30, &context, NULL, 0);
+
+		printf("%s [%zd, %zd]\n", buff, sz, rm);
 
 		if (sz) break;
 	}

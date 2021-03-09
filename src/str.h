@@ -16,9 +16,9 @@
 #define cxsl__cstrcat		CXSL__DEC(cstrcat)
 #define cxsl__cstrtok		CXSL__DEC(cstrtok)
 #define cxsl__cstrtrm		CXSL__DEC(cstrtrm)
-#define cxsl__csubstr		CXSL__DEC(csubstr)
-#define cxsl__csubstri		CXSL__DEC(csubstri)
-#define cxsl__csubstrn		CXSL__DEC(csubstrn)
+#define cxsl__cstrsub		CXSL__DEC(cstrsub)
+#define cxsl__cstrsubi		CXSL__DEC(cstrsubi)
+#define cxsl__cstrsubn		CXSL__DEC(cstrsubn)
 #define cxsl__cstrlwr		CXSL__DEC(cstrlwr)
 #define cxsl__cstrupr		CXSL__DEC(cstrupr)
 #define cxsl__cstrrev		CXSL__DEC(cstrrev)
@@ -45,9 +45,9 @@ size_t 		cxsl__cstrrev		(const char* str, const char**	context, char* out, size_
 size_t 		cxsl__cstrcat		(const char* str1, const char* str2, const char**	context, char* out, size_t sz);
 size_t 		cxsl__cstrtok		(const char* str, const char* delimiters, const char** context, char* out, size_t sz);
 size_t 		cxsl__cstrtrm		(const char* str, const char** context, char* out, size_t sz);
-size_t 		cxsl__csubstr 		(const char* str, size_t start_idx, char* out, size_t sz);
-size_t 		cxsl__csubstri 		(const char* str, size_t start_idx, size_t end_idx, char* out, size_t sz);
-size_t 		cxsl__csubstrn 		(const char* str, size_t start_idx, size_t len, char* out, size_t sz);
+size_t 		cxsl__cstrsub 		(const char* str, size_t start_idx, const char** context, char* out, size_t sz);
+size_t 		cxsl__cstrsubi 		(const char* str, size_t start_idx, size_t end_idx, const char** context, char* out, size_t sz);
+size_t 		cxsl__cstrsubn 		(const char* str, size_t start_idx, size_t len, const char** context, char* out, size_t sz);
 
 
 uint8_t 	cxsl__bstrhas		(const char* start, const char* endp1, char ch);
@@ -384,76 +384,119 @@ size_t 		cxsl__cstrtrm		(	const char* 	str 		,
 	return *st || *ed ? (size_t) ed - (size_t) st + 1 : 0;
 }
 
-size_t 		cxsl__csubstr 		(	const char* 	str 		, 
+size_t 		cxsl__cstrsub 		(	const char* 	str 		, 
 									size_t 			start_idx 	, 
+									const char** 	context 	,
 									char* 			out 		, 
 									size_t 			sz 				) 
 {
 	cxsl__assert(str != NULL, "Parameter str cannot be NULL");
-	cxsl__assert(out != NULL, "Parameter out cannot be NULL");
 
-	size_t i, r;
-	const char* st;
+	size_t i;
+	const char* st = cxsl__get_start(context, str + start_idx);
+
+	if ((uintptr_t) st < (uintptr_t) (str + start_idx)) {
+		st = str + start_idx;
+	}
+
+	cxsl__conditionally_goto_size_only(cxsl__csubstr, out);
 
 	sz--;
 
-	for (i = 0, st = str + start_idx; sz && *st; --sz, ++st) {
+	for (i = 0; sz && *st; --sz, ++st, ++i) {
 		out[i] = *st;
 	}
 
 	out[i] = 0;
 
-	for (r = 0; *st; ++st, ++r); 
+	cxsl__conditionally_update_context(context, st);
 
-	return r;
+	return *st ? 0 : i + 1;
+
+	cxsl__size_only_label(cxsl__csubstr):
+
+	for (i = 0; *st; ++st, ++i);
+
+	return i;
+
 }
 
-size_t 		cxsl__csubstri 		(	const char*		str 		, 
+size_t 		cxsl__cstrsubi 		(	const char*		str 		, 
 									size_t 			start_idx 	, 
 									size_t 			end_idx 	, 
+									const char**	context 	,
 									char* 			out 		, 
 									size_t 			sz 				) 
 {
 	cxsl__assert(str != NULL, "Parameter str cannot be NULL");
-	cxsl__assert(end_idx >= start_idx, "start_idx [%zd] must be either <= to end_idx [%zd]", start_idx, end_idx);
-	cxsl__assert(out != NULL, "Parameter out cannot be NULL");
+	cxsl__assert(end_idx >= start_idx, "end_idx must be greater than or equal to start_idx");
 
-	const char *st, *ep1;
-	size_t i, r;
+	size_t i;
+	const char* st = cxsl__get_start(context, str + start_idx);
+	const char* ep1 = str + end_idx + 1;
+
+	if ((uintptr_t) st < (uintptr_t) (str + start_idx)) {
+		st = str + start_idx;
+	}
+
+	cxsl__conditionally_goto_size_only(cxsl__csubstr, out);
 
 	sz--;
 
-	for (st = str + start_idx, ep1 = str + end_idx + 1, i = 0; sz && *st && st != ep1; --sz, ++st, ++i) {
+	for (i = 0; sz && st != ep1; --sz, ++st, ++i) {
 		out[i] = *st;
 	}
 
-	for (r = 0; *st && st != ep1; ++st, ++r);
+	out[i] = 0;
 
-	return r;
+	cxsl__conditionally_update_context(context, st);
+
+	return st == ep1 ? i + 1 : 0;
+
+	cxsl__size_only_label(cxsl__csubstr):
+
+	for (i = 0; st != ep1; ++st, ++i);
+
+	return i;
 
 }
 
-size_t 		cxsl__csubstrn 		(	const char* 	str 		, 
+size_t 		cxsl__cstrsubn 		(	const char* 	str 		, 
 									size_t 			start_idx 	, 
 									size_t 			len 		, 
+									const char**	context 	,
 									char* 			out 		, 
 									size_t 			sz 				)
 {
 	cxsl__assert(str != NULL, "Parameter str cannot be NULL");
-	cxsl__assert(out != NULL, "Parameter out cannot be NULL");
 
-	const char *st, *ep1;
-	size_t i, r;
+	size_t i;
+	const char* st = cxsl__get_start(context, str + start_idx);
+	const char* ep1 = str + start_idx + len;
+
+	if ((uintptr_t) st < (uintptr_t) (str + start_idx)) {
+		st = str + start_idx;
+	}
+
+	cxsl__conditionally_goto_size_only(cxsl__csubstr, out);
 
 	sz--;
 
-	for (st = str + start_idx, ep1 = str + start_idx + len, i = 0; sz && *st && st != ep1; --sz, ++st, ++i) {
+	for (i = 0; sz && st != ep1; --sz, ++st, ++i) {
 		out[i] = *st;
 	}
 
-	for (r = 0; *st && st != ep1; ++st, ++r);
+	out[i] = 0;
 
-	return r;
+	cxsl__conditionally_update_context(context, st);
+
+	return st == ep1 ? i + 1 : 0;
+
+	cxsl__size_only_label(cxsl__csubstr):
+
+	for (i = 0; st != ep1; ++st, ++i);
+
+	return i;
 }
 
 // bounded string function
