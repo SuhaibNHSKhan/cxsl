@@ -34,6 +34,16 @@
 #define cxsl__fstrsubi		CXSL__DEC(fstrsubi)
 #define cxsl__fstrsubn		CXSL__DEC(fstrsubn)
 
+#define cxsl__lstrlwr		CXSL__DEC(lstrlwr)
+#define cxsl__lstrupr		CXSL__DEC(lstrupr)
+#define cxsl__lstrrev		CXSL__DEC(lstrrev)
+#define cxsl__lstrcat		CXSL__DEC(lstrcat)
+#define cxsl__lstrtok		CXSL__DEC(lstrtok)
+#define cxsl__lstrtrm		CXSL__DEC(lstrtrm)
+#define cxsl__lstrsub		CXSL__DEC(lstrsub)
+#define cxsl__lstrsubi		CXSL__DEC(lstrsubi)
+#define cxsl__lstrsubn		CXSL__DEC(lstrsubn)
+
 #define cxsl__bcontainsc	CXSL__DEC(bcontainsc)
 #define cxsl__bconcat		CXSL__DEC(bconcat)
 #define cxsl__bstrtok		CXSL__DEC(bstrtok)
@@ -69,6 +79,16 @@ size_t 		cxsl__fstrtrm		(const char* str, char* out);
 size_t 		cxsl__fstrsub 		(const char* str, size_t start_idx, char* out);
 size_t 		cxsl__fstrsubi 		(const char* str, size_t start_idx, size_t end_idx, char* out);
 size_t 		cxsl__fstrsubn 		(const char* str, size_t start_idx, size_t len, char* out);
+
+size_t 		cxsl__lstrlwr		(const char* str);
+size_t	 	cxsl__lstrupr		(const char* str);
+size_t 		cxsl__lstrrev		(const char* str);
+size_t 		cxsl__lstrcat		(const char* str1, const char* str2);
+size_t 		cxsl__lstrtok		(const char* str, const char* delimiters, const char** context);
+size_t 		cxsl__lstrtrm		(const char* str);
+size_t 		cxsl__lstrsub 		(const char* str, size_t start_idx);
+size_t 		cxsl__lstrsubi 		(const char* str, size_t start_idx, size_t end_idx);
+size_t 		cxsl__lstrsubn 		(const char* str, size_t start_idx, size_t len);
 
 uint8_t 	cxsl__bstrhas		(const char* start, const char* endp1, char ch);
 int8_t		cxsl__bstrcmp		(const char* str1_start, const char* str1_endp1, const char* str2_start, const char *str2_endp1);
@@ -714,6 +734,100 @@ size_t 		cxsl__fstrsubn 		(	const char* 	str 		,
 	out[i] = 0;
 
 	return i;
+}
+
+// length only functions
+
+size_t 		cxsl__lstrlwr		(	const char* 	str 	) 
+{
+	return str ? cxsl__cstrlen(str) + 1 : 0;
+}
+
+size_t	 	cxsl__lstrupr		(	const char* 	str 	)
+{
+	return str ? cxsl__cstrlen(str) + 1 : 0;
+}
+
+size_t 		cxsl__lstrrev		(	const char* 	str 	)
+{
+	return str ? cxsl__cstrlen(str) + 1 : 0;
+}
+
+size_t 		cxsl__lstrcat		(	const char* 	str1 	, 
+									const char* 	str2 		)
+{
+	return str1 && str2 ? cxsl__cstrlen(str1) + cxsl__cstrlen(str2) + 1 : 0;
+}
+
+size_t 		cxsl__lstrtok		(	const char* 	str 		, 
+									const char* 	delimiters 	, 
+									const char** 	context 		)
+{
+	if (str == NULL || delimiters == NULL) return 0;
+
+	const char* st = cxsl__get_start(context, str);
+	size_t i;
+
+
+	for (i = 0; *st && !cxsl__cstrhas(delimiters, *st); ++i, ++st);
+
+	return i + 1;
+}
+
+size_t 		cxsl__lstrtrm		(	const char* 	str 	)
+{
+	if (!str) return 0;
+
+	const char* st = str;
+	const char* ed = str + cxsl__cstrlen(str);
+
+	for (; *st && (*st == ' ' || *st == '\t' || *st == '\r' || *st == '\n'); ++st);
+	for (; ed != st && (*ed == ' ' || *ed == '\t' || *ed == '\r' || *ed == '\n' || *ed == '\0'); --ed);
+
+	return (size_t) ed - (size_t) st + 2;
+}
+
+size_t 		cxsl__lstrsub 		(	const char* 	str 	, 
+									size_t 			start_idx 	)
+{
+	if (!str) return 0;
+
+	const char* st = str + start_idx;
+	size_t i;
+
+	for (i = 0; st; ++st, ++i);
+
+	return i + 1;
+}
+
+size_t 		cxsl__lstrsubi 		(	const char* 	str 		, 
+									size_t 			start_idx 	, 
+									size_t 			end_idx 		)
+{
+	if (!str || start_idx > end_idx) return 0;
+
+	const char* st = str + start_idx;
+	const char* ep1 = str + end_idx + 1;
+	size_t i;
+
+	for (i = 0; st && st != ep1; ++st, ++i);
+
+	return i + 1;
+}
+
+size_t 		cxsl__lstrsubn 		(	const char* 	str 		, 
+									size_t 			start_idx 	, 
+									size_t 			len 	 		)
+{
+	if (!str) return 0;
+
+	const char* st = str + start_idx;
+	const char* ep1 = st + len;
+	size_t i;
+
+	for (i = 0; st && st != ep1; ++st, ++i);
+
+	return i + 1;
 }
 
 // bounded string function
