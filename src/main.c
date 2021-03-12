@@ -51,26 +51,26 @@ void my_free(void* ptr, void* user) {
 #define CXSL_PSTR_IMPLEMENTATION
 #include "pstr.h"
 
-int8_t t1_helper(const char* s1, const char* s2) {
-	return cxsl__bstrcmp(s1, s1 + cxsl__cstrlen(s1), s2, s2 + cxsl__cstrlen(s2));
-}
+// int8_t t1_helper(const char* s1, const char* s2) {
+// 	return cxsl__bstrcmp(s1, s1 + cxsl__cstrlen(s1), s2, s2 + cxsl__cstrlen(s2));
+// }
 
-void t1() {
-	const char* s1 = "Hello";
-	const char* s2 = "Hello";
-	const char* s3 = "Anything";
-	const char* s4 = "Hellz Kitchen";
-	const char* s5 = "Hello World";
-	const char* s6 = "Hell";
+// void t1() {
+// 	const char* s1 = "Hello";
+// 	const char* s2 = "Hello";
+// 	const char* s3 = "Anything";
+// 	const char* s4 = "Hellz Kitchen";
+// 	const char* s5 = "Hello World";
+// 	const char* s6 = "Hell";
 
-	printf("%d\n%d\n%d\n%d\n%d\n",
-			t1_helper(s1, s2),
-			t1_helper(s1, s3),
-			t1_helper(s1, s4),
-			t1_helper(s1, s5),
-			t1_helper(s1, s6));
+// 	printf("%d\n%d\n%d\n%d\n%d\n",
+// 			t1_helper(s1, s2),
+// 			t1_helper(s1, s3),
+// 			t1_helper(s1, s4),
+// 			t1_helper(s1, s5),
+// 			t1_helper(s1, s6));
 
-}
+// }
 
 
 void t2_1() {
@@ -293,7 +293,7 @@ void t5_1() {
 
 
 int main(int argc, char** argv) {
-	t1();
+	// t1();
 	printf("\n--------------------------------\n");
 	t2_1();
 	printf("\n--------------------------------\n");
