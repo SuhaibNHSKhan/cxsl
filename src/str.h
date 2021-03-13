@@ -1115,12 +1115,156 @@ size_t 		cxsl__nstrtok		(	const char* 	str 		,
 	return i;
 }
 
-#if 0
-size_t 		cxsl__nstrtrm 		(const char* str, size_t len, const char** context, char* out, size_t sz)
-size_t 		cxsl__nsubstr 		(const char* str, size_t len, size_t start_idx, const char** context, char* out, size_t sz);
-size_t 		cxsl__nsubstri 		(const char* str, size_t len, size_t start_idx, size_t end_idx, const char** context, char* out, size_t sz);
-size_t 		cxsl__nsubstrn 		(const char* str, size_t len, size_t start_idx, size_t len, const char** context, char* out, size_t sz);
-#endif
+size_t 		cxsl__nstrtrm 		(	const char*		str 	, 
+									size_t 			len 	, 
+									const char** 	context , 
+									char* 			out 	, 
+									size_t 			sz 			)
+{
+	cxsl__assert(str != NULL, "Parameter str cannot be NULL");
 
+	size_t i;
+	const char* st = cxsl__get_start(context, str);
+	const char* ed = str + len;
+
+	for (; st != ed && (*st == ' ' || *st == '\t' || *st == '\r' || *st == '\n'); ++st);
+	for (; ed != st && (*ed == ' ' || *ed == '\t' || *ed == '\r' || *ed == '\n' || *ed == '\0'); --ed);
+
+	cxsl__conditionally_goto_size_only(cxsl__nstrtrm, out);		
+
+	sz--;
+
+	for (i = 0; sz && st != (ed + 1); --len, --sz, ++st, ++i) {
+		out[i] = *st;
+	}
+	
+	out[i] = 0;
+
+	cxsl__conditionally_update_context(context, st);
+
+	return len || st == ed + 1 ? i + 1 : 0;
+
+	cxsl__size_only_label(cxsl__nstrtrm):
+
+	return st == str + len ? 0 : (size_t) ed - (size_t) st + 1;
+}
+
+#define cxsl__min(a, b) ((a) < (b) ? (a) : (b))
+
+size_t 		cxsl__nsubstr 		(	const char* 	str 		, 
+									size_t 			len 		, 
+									size_t 			start_idx 	, 
+									const char** 	context 	, 
+									char* 			out 		, 
+									size_t 			sz 				)
+{
+	cxsl__assert(str != NULL, "Parameter str cannot be NULL");
+
+	size_t i;
+	const size_t sidx = cxsl__min(start_idx, len);
+	const char* st = cxsl__get_start(context, str + start_idx);
+	const char* ep1 = str + len;
+
+	if ((uintptr_t) st < (uintptr_t) (str + start_idx)) {
+		st = str + start_idx;
+	}
+
+	cxsl__conditionally_goto_size_only(cxsl__nsubstr, out);
+
+	sz--;
+
+	for (i = 0; sz && st != ep1; --sz, ++st, ++i) {
+		out[i] = *st;
+	}
+
+	out[i] = 0;
+
+	cxsl__conditionally_update_context(context, st);
+
+	return st == ep1 ? i + 1 : 0;
+
+	cxsl__size_only_label(cxsl__nsubstr):
+
+	return len - sidx;
+}
+
+size_t 		cxsl__nsubstri 		(	const char* 	str 		, 
+									size_t 			len 		, 
+									size_t 			start_idx 	, 
+									size_t 			end_idx 	, 
+									const char** 	context 	, 
+									char* 			out 		, 
+									size_t 			sz 				)
+{
+	cxsl__assert(str != NULL, "Parameter str cannot be NULL");
+	cxsl__assert(end_idx >= start_idx, "end_idx must be greater than or equal to start_idx");
+
+	size_t i;
+	const size_t sidx = cxsl__min(start_idx, len);
+	const size_t eidx = cxsl__min(end_idx, len - 1);
+	const char* st = cxsl__get_start(context, str + sidx);
+	const char* ep1 = str + eidx + 1;
+
+	if ((uintptr_t) st < (uintptr_t) (str + sidx)) {
+		st = str + sidx;
+	}
+
+	cxsl__conditionally_goto_size_only(cxsl__nsubstri, out);
+
+	sz--;
+
+	for (i = 0; sz && st != ep1; --sz, ++st, ++i) {
+		out[i] = *st;
+	}
+
+	out[i] = 0;
+
+	cxsl__conditionally_update_context(context, st);
+
+	return st == ep1 ? i + 1 : 0;
+
+	cxsl__size_only_label(cxsl__nsubstri):
+
+	return eidx - sidx + 1;
+}
+
+size_t 		cxsl__nsubstrn 		(	const char* 	str 		, 
+									size_t 			len 		, 
+									size_t 			start_idx 	, 
+									size_t 			l 			, 
+									const char** 	context 	, 
+									char* 			out 		, 
+									size_t 			sz 				)
+{
+	cxsl__assert(str != NULL, "Parameter str cannot be NULL");
+
+	size_t i;
+	const size_t sidx = cxsl__min(start_idx, len - 1);
+	const size_t eidx = cxsl__min(sidx + l - 1, len - 1);
+	const char* st = cxsl__get_start(context, str + sidx);
+	const char* ep1 = str + eidx + 1;
+
+	if ((uintptr_t) st < (uintptr_t) (str + sidx)) {
+		st = str + sidx;
+	}
+
+	cxsl__conditionally_goto_size_only(cxsl__nsubstrn, out);
+
+	sz--;
+
+	for (i = 0; sz && *st && st != ep1; --sz, ++st, ++i) {
+		out[i] = *st;
+	}
+
+	out[i] = 0;
+
+	cxsl__conditionally_update_context(context, st);
+
+	return st == ep1 ? i + 1 : 0;
+
+	cxsl__size_only_label(cxsl__nsubstrn):
+
+	return eidx - sidx + 1;
+}
 
 #endif
