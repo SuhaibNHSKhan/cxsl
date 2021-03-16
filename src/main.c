@@ -76,16 +76,16 @@ void my_free(void* ptr, void* user) {
 void t2_1() {
 	nstr_t str1 = nstr_new("Hello", NULL);
 	nstr_t str2 = nstr_new(" World This is a large string", NULL);
-
+    
 	printf("%s\n%s\n\n", nstr_tostr(&str1), nstr_tostr(&str2));
-
+    
 	nstr_t str3 = nstr_ofsize(nstr_size(&str1) + nstr_size(&str2), NULL);
-
+    
 	strcpy((char*) nstr_begin(&str3), nstr_begin(&str1));
 	strcat((char*) nstr_begin(&str3), nstr_begin(&str2));
-
+    
 	printf("%s\n", nstr_tostr(&str3));
-
+    
 	nstr_delete(&str1, NULL);
 	nstr_delete(&str2, NULL);
 	nstr_delete(&str3, NULL);
@@ -94,32 +94,32 @@ void t2_1() {
 void t2_2() {
 	nstr_t str1 = nstr_move("Hello");
 	nstr_t str2 = nstr_move(" World This is a large string");
-
+    
 	printf("%s\n%s\n\n", nstr_tostr(&str1), nstr_tostr(&str2));
-
+    
 	nstr_t str3 = nstr_ofsize(nstr_size(&str1) + nstr_size(&str2), NULL);
-
+    
 	strcpy((char*) nstr_begin(&str3), nstr_begin(&str1));
 	strcat((char*) nstr_begin(&str3), nstr_begin(&str2));
-
+    
 	printf("%s\n", nstr_tostr(&str3));
-
+    
 	nstr_delete(&str3, NULL);
 }
 
 void t3() {
 	char* s1 = pstrb_new("", NULL);
 	char* s2 = pstrb_new("", NULL);
-
+    
 	printf("s1 ['%s'] == s2 ['%s'] : %d\n", s1, s2, s1 == s2);
-
+    
 	s1 = pstrb_concat_cstr(s1, "Hello", NULL);
 	s2 = pstrb_concat_cstr(s2, " World!", NULL);
-
+    
 	printf("s1 ['%s'] == s2 ['%s'] : %d\n", s1, s2, s1 == s2);	
-
+    
 	s1 = pstrb_concat_cstr(s1, s2, NULL);
-
+    
 	printf("s1 ['%s'] == s2 ['%s'] : %d\n", s1, s2, s1 == s2);	
 }
 
@@ -127,146 +127,146 @@ void t4() {
 	const char* str = "Hello World thiis is a stupidly long sentence";
 	// const char* str = "";
 	const char* context = str;
-
+    
 	char buff[16];
-
+    
 	intptr_t sz = cxsl_cstrlwr(str, NULL, NULL, 0), rm;
-
+    
 	printf("%Id\n", sz);
-
+    
 	// for (;;) {
 	// 	sz = cxsl__cstrlwr(str, &context, buff, 16);
 	// 	rm = cxsl__cstrlwr(str, &context, NULL, 0);
 	// 	printf("%s [%zd, %zd]\n", buff, cxsl__outstrsz(sz, 16), rm);
-
+    
 	// 	if (sz) break;
 	// } 
-
+    
 	// while (sz = cxsl__cstrlwr(str, &context, buff, 16), !sz) {
 	// 	printf("%s [%zd]\n", buff, sz);
 	// }
 	// printf("%s [%zd]\n", buff, sz);
-
+    
 	do {
-		sz = cxsl__cstrlwr(str, &context, buff, 16);
+        sz = cxsl__cstrlwr(str, &context, buff, 16);
 		rm = cxsl__cstrlwr(str, &context, NULL, 0);
 		printf("%s [%zd, %zd]\n", buff, cxsl__outstrsz(sz, 16), rm);
-
+        
 	} while (!sz);
-
+    
 	printf("\n------------------------\n");
-
+    
 	context = str + strlen(str) - 1;
-
+    
 	do {
 		sz = cxsl__cstrrev(str, &context, buff, 16);
 		rm = cxsl__cstrrev(str, &context, NULL, 0);
 		printf("%s [%zd, %zd]\n", buff, cxsl__outstrsz(sz, 16), rm);
-
+        
 	} while (!sz);
-
+    
 	printf("\n------------------------\n");
-
+    
 	const char* str1 = "Hello World this is the first string";
 	const char* str2 = " Hello World this is the second string";
-
+    
 	context = str1;
-
+    
 	sz = cxsl_cstrcat(str1, str2, NULL, NULL, 0);
-
+    
 	printf("[%zd]\n------------\n", sz);
-
+    
 	do {
 		sz = cxsl_cstrcat(str1, str2, &context, buff, 16);
-
+        
 		printf("%s [%zd]\n", buff, sz);
-
+        
 	} while (!sz);
-
+    
 	printf("\n--------------------------------\n");
-
+    
 	context = str;
-
+    
 	for (;;) {
 		for (;;) {
 			sz = cxsl_cstrtok(str, " ", &context, buff, 4);
 			printf("%s|", buff);
-
+            
 			if (sz) break;
 		}
-
+        
 		printf("\n");
 		if (!context[0]) break;
 	}
-
+    
 	const char* str3 = " \t\r  Heo  afd e \r ef   \r\n ewfw e  wef  \t\n";
 	context = str3;
-
+    
 	sz = cxsl_cstrtrm(str3, NULL, NULL, 0);
-
+    
 	printf("[%zd]\n", sz);
-
+    
 	for (;;) {
 		sz = cxsl_cstrtrm(str3, &context, buff, 16);
-
+        
 		size_t i = 0;
 		while (buff[i]) {
 			printf("0x%x ", buff[i]);
 			i++;
 		}
 		printf("|");
-
+        
 		if (sz) break;
 	}
-
+    
 	printf("\n--------------------------------\n");
-
+    
 	context = str;
-
+    
 	sz = cxsl_cstrsub(str, 1, NULL, NULL, 0);
-
+    
 	printf("%s [%zd]\n", str, sz);
-
+    
 	for (;;) {
 		sz = cxsl_cstrsub(str, 5, &context, buff, 16);
 		rm = cxsl_cstrsub(str, 5, &context, NULL, 0);
-
+        
 		printf("%s [%zd, %zd]\n", buff, sz, rm);
-
+        
 		if (sz) break;
 	}
-
+    
 	printf("\n--------------------------------\n");
-
+    
 	context = str;
-
+    
 	sz = cxsl_cstrsubi(str, 5, 33, NULL, NULL, 0);
-
+    
 	printf("%s [%zd]\n", str, sz);
-
+    
 	for (;;) {
 		sz = cxsl_cstrsubi(str, 5, 33, &context, buff, 16);
 		rm = cxsl_cstrsubi(str, 5, 33, &context, NULL, 0);
-
+        
 		printf("%s [%zd, %zd]\n", buff, sz, rm);
-
+        
 		if (sz) break;
 	}
-
+    
 	printf("\n--------------------------------\n");
-
+    
 	context = str;
-
+    
 	sz = cxsl_cstrsubn(str, 5, 30, NULL, NULL, 0);
-
+    
 	printf("%s [%zd]\n", str, sz);
-
+    
 	for (;;) {
-		sz = cxsl_cstrsubn(str, 5, 30, &context, buff, 16);
+        sz = cxsl_cstrsubn(str, 5, 30, &context, buff, 16);
 		rm = cxsl_cstrsubn(str, 5, 30, &context, NULL, 0);
-
+        
 		printf("%s [%zd, %zd]\n", buff, sz, rm);
-
+        
 		if (sz) break;
 	}
 }
@@ -275,19 +275,19 @@ void t4() {
 void t5_1() {
 	const char* astr = "Suhaib Khan the programming morgan something";
 	size_t astr_sz = strlen(astr);
-
+    
 	char* str = pstrb_new("Hello ", NULL);
-
+    
 	printf("%s, %zd, %zd\n", str, pstrb_len(str), pstrb_cap(str));
-
+    
 	str = pstrb_concat_cstr(str, "World!", NULL);
-
+    
 	printf("%s, %zd, %zd\n", str, pstrb_len(str), pstrb_cap(str));
-
+    
 	str = pstrb_concat(str, astr, astr + astr_sz, NULL);
-
+    
 	printf("%s, %zd, %zd\n", str, pstrb_len(str), pstrb_cap(str));
-
+    
 	pstrb_delete(str, NULL);
 }
 
@@ -304,5 +304,5 @@ int main(int argc, char** argv) {
 	t3();
 	printf("\n--------------------------------\n");
 	t4();
-
+    
 }

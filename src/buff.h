@@ -6,9 +6,9 @@
 #undef CXSL__DEC
 
 #ifdef CXSL_DEC
-	#define CXSL__DEC(name) CXSL_DEF(name)
+#define CXSL__DEC(name) CXSL_DEF(name)
 #else
-	#define CXSL__DEC(name) cxsl_##name
+#define CXSL__DEC(name) cxsl_##name
 #endif
 
 #undef cxsl__memcpy
@@ -31,23 +31,23 @@ void cxsl__memset	(void* dest, uint8_t b, size_t sz);
 #undef CXSL_MEM_IMPLEMENTATION
 
 void 	cxsl__memcpy	(	void* 			dest 	, 
-							const void* 	src		, 
-							size_t 			sz 			) 
+                    const void* 	src		, 
+                    size_t 			sz 			) 
 {
 	uint8_t* d = (uint8_t*) dest;
 	uint8_t* s = (uint8_t*) src;
-
+    
 	for (; sz; --sz, ++d, ++s) {
 		*d = *s;
 	}
 }
 
 void 	cxsl__memset	(	void* 			dest 	, 
-							uint8_t 		b		, 
-							size_t 			sz 			) 
+                    uint8_t 		b		, 
+                    size_t 			sz 			) 
 {
 	uint8_t* d = (uint8_t*) dest;
-
+    
 	for (; sz; --sz, ++d) {
 		*d = b;
 	}
